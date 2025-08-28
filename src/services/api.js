@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:4000/api/workouts';
+const BASE_URL = 'http://192.168.1.138:4000/api/workouts';
 
 export async function getWorkouts() {
     const res = await fetch(BASE_URL);
