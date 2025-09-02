@@ -12,12 +12,12 @@ const app = express();
 app.use(cors());
 app.use(express.json({ extended: false }));
 
-// Routes
-app.use('/api/auth', require('./src/routes/auth'));
-app.use('/api/users', require('./src/routes/users'));
-app.use('/api/exercises', require('./src/routes/exercises'));
-app.use('/api/workouts', require('./src/routes/workouts'));
-app.use('/api/sessions', require('./src/routes/sessions'));
+// Routes - PATHS CORREGITS
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/exercises', require('./routes/exercises'));
+app.use('/api/workouts', require('./routes/workouts'));
+app.use('/api/sessions', require('./routes/sessions'));
 
 // Test route
 app.get('/', (req, res) => res.send('Grove Fitness API Running'));
