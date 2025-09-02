@@ -1,7 +1,8 @@
+// frontend/src/screens/Dashboard/DashboardScreen.js - CORREGIR IMPORT
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient'; // ← ESTE FALTABA
 import CoachMessage from '../../components/Coach/CoachMessage';
 import StatsCard from '../../components/common/StatsCard';
 
@@ -22,7 +23,7 @@ export default function DashboardScreen() {
 
           <View style={styles.statsContainer}>
             <StatsCard number="5+" label="Dominadas" />
-            <StatsCard number="11" label="Semanas" />
+            <StatsCard number="12" label="Semanas" />
             <StatsCard number="+4kg" label="Músculo" />
           </View>
         </ScrollView>
