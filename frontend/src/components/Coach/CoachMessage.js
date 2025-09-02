@@ -1,13 +1,12 @@
+// frontend/src/components/Coach/CoachMessage.js - CREAR ESTE ARCHIVO
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 export default function CoachMessage({ message }) {
   return (
     <View style={styles.container}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>í´–</Text>
-      </View>
-      <View style={styles.messageContainer}>
+      <View style={styles.bubble}>
+        <Text style={styles.coachIcon}>ðŸ¤–</Text>
         <Text style={styles.message}>{message}</Text>
       </View>
     </View>
@@ -16,31 +15,24 @@ export default function CoachMessage({ message }) {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginVertical: 20,
+    paddingHorizontal: 10,
+  },
+  bubble: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 15,
     padding: 15,
-    borderRadius: 10,
-    marginVertical: 10,
-    width: '100%',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 15,
   },
-  avatarText: {
-    fontSize: 20,
-  },
-  messageContainer: {
-    flex: 1,
+  coachIcon: {
+    fontSize: 24,
+    marginRight: 10,
   },
   message: {
-    color: 'white',
+    flex: 1,
     fontSize: 16,
-    lineHeight: 22,
+    color: '#2D5016',
+    fontWeight: '500',
   },
 });
