@@ -8,7 +8,7 @@ import WorkoutScreen from '../screens/Workout/WorkoutScreen';
 import ProgressScreen from '../screens/Progress/ProgressScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator(); //asd
 
 export default function AppNavigator() {
     return (
