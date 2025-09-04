@@ -1,79 +1,103 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, Image, TextInput, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import ProgressBar from '../../components/common/ProgressBar';
+import Header from '../../components/common/Header';
 
 export default function DashboardScreen() {
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <LinearGradient
-        colors={['#4CAF50', '#2D5016']}
-        style={styles.container}
+    <View style={{ flex: 1 }}>
+      <ImageBackground
+        source={{ uri: 'https://www.transparenttextures.com/patterns/green-fibers.png' }}
+        resizeMode="repeat"
+        style={styles.background}
       >
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Logo/nom app a dalt a l'esquerra */}
-          <Text style={styles.logo}>🌱 Groove</Text>
+        <LinearGradient
+          colors={['rgba(76, 175, 80, 0.9)', 'rgba(45, 80, 22, 0.95)']}
+          style={styles.container}
+        >
+          {/* Header añadido */}
+          <Header title="Grove" />
 
-          {/* Avatar rodó i nom d'usuari */}
-          <View style={styles.avatarSection}>
-            <Image
-              source={{ uri: 'https://placekitten.com/200/200' }}
-              style={styles.avatar}
-            />
-            <Text style={styles.username}>Usuari Pro</Text>
-            <Text style={styles.level}>Nivell 7 · Explorador</Text>
-          </View>
-
-          {/* Barres de progrés per estadístiques */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Estadístiques</Text>
-
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>💪 Força</Text>
-              <ProgressBar progress={0.7} color="#FFD700" />
+          <ScrollView contentContainerStyle={styles.content}>
+            {/* Avatar y usuario */}
+            <View style={styles.avatarSection}>
+              <Image
+                source={{ uri: 'https://placekitten.com/200/200' }}
+                style={styles.avatar}
+              />
+              <Text style={styles.username}>Coach Bestia</Text>
+              <Text style={styles.level}>Nivell 12 · Beast Mode</Text>
             </View>
 
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>🏃‍♂️ Resistència</Text>
-              <ProgressBar progress={0.4} color="#00BFFF" />
+            {/* Estadístiques */}
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Estadístiques</Text>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>💪 Força</Text>
+                <ProgressBar progress={0.7} color="#FFD700" />
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>🏃‍♂️ Resistència</Text>
+                <ProgressBar progress={0.4} color="#00BFFF" />
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>⚡ Velocitat</Text>
+                <ProgressBar progress={0.55} color="#FF4500" />
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>🧠 Estratègia</Text>
+                <ProgressBar progress={0.8} color="#8A2BE2" />
+              </View>
             </View>
 
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>⚡ Velocitat</Text>
-              <ProgressBar progress={0.55} color="#FF4500" />
+            {/* Resum del dia */}
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>📅 Resum del dia</Text>
+              <Text style={styles.sectionText}>Avui tens 3 exercicis pendents.</Text>
+              <Text style={styles.sectionText}>Has entrenat 2 dies aquesta setmana 💪</Text>
             </View>
 
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>🧠 Estratègia</Text>
-              <ProgressBar progress={0.8} color="#8A2BE2" />
+            {/* Motivació */}
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>🔥 Motivació</Text>
+              <Text style={styles.sectionText}>
+                "Els petits hàbits creen grans resultats."
+              </Text>
             </View>
-          </View>
 
-        </ScrollView>
-      </LinearGradient>
-    </SafeAreaView>
+            {/* Chat IA mock */}
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>🤖 Xat IA (mock)</Text>
+              <TextInput
+                placeholder="Escriu aquí per parlar amb el teu coach..."
+                placeholderTextColor="rgba(255,255,255,0.6)"
+                style={styles.input}
+                editable={false}
+              />
+            </View>
+          </ScrollView>
+        </LinearGradient>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
   content: {
     padding: 20,
-    alignItems: 'center',
   },
-  logo: {
-    fontSize: 18,
-    color: 'white',
-    fontWeight: 'bold',
-    alignSelf: 'flex-start',
-    marginBottom: 20,
-  },
+  // Logo removido - ya está en header
   avatarSection: {
     alignItems: 'center',
     marginBottom: 30,
+    marginTop: 10, // Añadido pequeño margen superior
   },
   avatar: {
     width: 100,
@@ -92,15 +116,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
   },
-  statsSection: {
-    width: '100%',
-    marginTop: 10,
-  },
   card: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 16,
     padding: 16,
-    marginHorizontal: 20,
     marginTop: 20,
     shadowColor: '#000',
     shadowOpacity: 0.15,
@@ -111,7 +130,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  sectionText: {
+    fontSize: 14,
+    color: '#fff',
+    marginBottom: 4,
   },
   statRow: {
     marginBottom: 12,
@@ -120,5 +144,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 4,
     fontSize: 14,
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 12,
+    color: 'white',
+    marginTop: 8,
   },
 });
