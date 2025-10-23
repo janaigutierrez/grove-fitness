@@ -30,14 +30,38 @@ const userSchema = new mongoose.Schema({
     current_weights: { type: Map, of: Number },
     personal_bests: { type: Map, of: mongoose.Schema.Types.Mixed },
 
-    // AI preferences
-    personality_type: {
+    // ============ AI PREFERENCES ============
+    ai_personality: {
         type: String,
-        enum: ['motivador', 'analític', 'relaxat'],
+        enum: ['motivador', 'analitico', 'bestia', 'relajado'],
         default: 'motivador'
-    }
+    },
+    ai_context_history: [{
+        role: { type: String, enum: ['user', 'assistant'] },
+        content: String,
+        timestamp: { type: Date, default: Date.now }
+    }],
+
+    // ============ AUTH & SECURITY ============
+    // Refresh tokens
+    refresh_tokens: [{
+        token: String,
+        created_at: { type: Date, default: Date.now },
+        expires_at: Date,
+        device: String // "iPhone 13", "Web"
+    }],
+
+    // Blacklist tokens (para logout)
+    blacklisted_tokens: [{
+        token: String,
+        blacklisted_at: { type: Date, default: Date.now }
+    }]
+
 }, {
     timestamps: true
 });
+
+// Índices
+userSchema.index({ email: 1 });
 
 module.exports = mongoose.model('User', userSchema);
