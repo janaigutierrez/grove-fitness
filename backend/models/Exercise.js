@@ -1,44 +1,62 @@
 const mongoose = require('mongoose');
 
 const exerciseSchema = new mongoose.Schema({
-    // Basic info
-    name: { type: String, required: true },
-    user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // Info básica
+    name: { type: String, required: true }, // "Flexiones"
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // null si es predefinido
 
-    // Exercise type
+    // Clasificación
     type: {
         type: String,
         enum: ['reps', 'time', 'cardio'],
         required: true
     },
+    category: {
+        type: String,
+        enum: ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'cardio', 'full_body']
+    },
 
-    // For type: 'reps'
-    sets: Number,
-    reps: Number,
-    weight: String, // "5kg", "corporal", "10kg"
-    rest_seconds: { type: Number, default: 60 },
+    // Músculos trabajados
+    muscle_groups: [{
+        type: String,
+        enum: ['pectoral', 'dorsal', 'trapecio', 'deltoides', 'biceps', 'triceps',
+            'cuadriceps', 'isquios', 'gluteos', 'gemelos', 'abdominales', 'oblicuos']
+    }],
 
-    // For type: 'time'  
-    duration_seconds: Number,
+    // Equipo necesario
+    equipment: [{
+        type: String,
+        enum: ['bodyweight', 'dumbbells', 'barbell', 'pullup_bar', 'resistance_bands',
+            'bench', 'kettlebell', 'machine', 'other']
+    }],
 
-    // For type: 'cardio'
-    distance_km: Number,
-    pace: { type: String, enum: ['baixa', 'moderada', 'alta'] },
-    duration_minutes: Number,
+    // Valores por defecto (sugerencias)
+    default_sets: { type: Number, default: 3 },
+    default_reps: { type: Number, default: 10 },
+    default_rest_seconds: { type: Number, default: 60 },
+
+    // Para cardio
+    default_duration_seconds: Number,
+    default_distance_km: Number,
 
     // Metadata
-    category: String, // "pectoral", "espalda", "piernas"...
-    difficulty: { type: String, enum: ['easy', 'medium', 'hard'] },
-    notes: String,
+    difficulty: {
+        type: String,
+        enum: ['beginner', 'intermediate', 'advanced'],
+        default: 'intermediate'
+    },
+    instructions: String,
+    video_url: String,
+    is_custom: { type: Boolean, default: true }, // true = creado por user
 
-    // Progress tracking
-    last_performed: Date,
-    times_completed: { type: Number, default: 0 }
-}, {
-    timestamps: true
-});
+    // Stats
+    times_performed: { type: Number, default: 0 },
+    last_performed: Date
 
-// Index per millorar queries
-exerciseSchema.index({ user_id: 1, type: 1 });
+}, { timestamps: true });
+
+// Índices
+exerciseSchema.index({ user_id: 1, category: 1 });
+exerciseSchema.index({ is_custom: 1 });
 
 module.exports = mongoose.model('Exercise', exerciseSchema);

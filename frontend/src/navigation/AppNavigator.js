@@ -1,8 +1,10 @@
-import React from 'react';
+// frontend/src/navigation/AppNavigator.js
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 
+import LoginScreen from '../screens/Auth/LoginScreen';
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
 import WorkoutScreen from '../screens/Workout/WorkoutScreen';
 import ProgressScreen from '../screens/Progress/ProgressScreen';
@@ -11,6 +13,18 @@ import ProfileScreen from '../screens/Profile/ProfileScreen';
 const Tab = createBottomTabNavigator(); //asd
 
 export default function AppNavigator() {
+    const [user, setUser] = useState(null);
+    const [token, setToken] = useState(null);
+
+    const handleLogin = (userToken, userData) => {
+        setToken(userToken);
+        setUser(userData);
+    };
+
+    if (!user) {
+        return <LoginScreen onLogin={handleLogin} />;
+    }
+
     return (
         <NavigationContainer>
             <Tab.Navigator
@@ -29,10 +43,16 @@ export default function AppNavigator() {
                     headerShown: false,
                 })}
             >
-                <Tab.Screen name="Dashboard" component={DashboardScreen} />
-                <Tab.Screen name="Workout" component={WorkoutScreen} />
+                <Tab.Screen name="Dashboard">
+                    {(props) => <DashboardScreen {...props} user={user} token={token} />}
+                </Tab.Screen>
+                <Tab.Screen name="Workout">
+                    {(props) => <WorkoutScreen {...props} token={token} />}
+                </Tab.Screen>
                 <Tab.Screen name="Progress" component={ProgressScreen} />
-                <Tab.Screen name="Profile" component={ProfileScreen} />
+                <Tab.Screen name="Profile">
+                    {(props) => <ProfileScreen {...props} user={user} />}
+                </Tab.Screen>
             </Tab.Navigator>
         </NavigationContainer>
     );

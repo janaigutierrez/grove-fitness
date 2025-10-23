@@ -1,47 +1,73 @@
 const mongoose = require('mongoose');
 
 const workoutSchema = new mongoose.Schema({
-    // Basic info
-    name: { type: String, required: true }, // "Push Day", "Lunes Pectoral"
+    // Info básica
+    name: { type: String, required: true }, // "LUNES - PUSH"
     user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    description: String, // "Pectoral + hombros + tríceps"
 
-    // Workout structure
+    // Ejercicios del workout
     exercises: [{
-        exercise_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Exercise' },
-        order: Number, // ordre dins el workout
-        // Override exercise defaults si cal
-        custom_sets: Number,
-        custom_reps: Number,
-        custom_weight: String,
-        custom_duration: Number,
-        notes: String
+        exercise_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Exercise',
+            required: true
+        },
+        order: { type: Number, required: true }, // 1, 2, 3...
+
+        // Personalizaciones (override de defaults del Exercise)
+        custom_sets: Number, // Si no está, usa default_sets del Exercise
+        custom_reps: Number, // Si no está, usa default_reps
+        custom_rest_seconds: Number, // Descanso entre series
+        custom_weight: String, // "10kg", "corporal", "5kg"
+
+        // Para time-based
+        custom_duration_seconds: Number,
+
+        // Para cardio
+        custom_distance_km: Number,
+        custom_pace: { type: String, enum: ['low', 'moderate', 'high'] },
+
+        notes: String // Notas específicas para este ejercicio en este workout
     }],
 
     // Timing
-    estimated_duration: Number, // minuts
-    actual_duration: Number, // quan es completa
+    estimated_duration_minutes: Number, // Auto-calculado o manual
 
-    // Classification
+    // Clasificación
     workout_type: {
         type: String,
-        enum: ['push', 'pull', 'legs', 'full_body', 'cardio', 'custom']
+        enum: ['push', 'pull', 'legs', 'full_body', 'cardio', 'upper', 'lower', 'custom'],
+        default: 'custom'
     },
-    difficulty: { type: String, enum: ['easy', 'medium', 'hard'] },
+    difficulty: {
+        type: String,
+        enum: ['beginner', 'intermediate', 'advanced']
+    },
 
-    // Status
-    is_template: { type: Boolean, default: true }, // template vs session
-    completed: { type: Boolean, default: false },
-    completion_date: Date,
+    // Estado
+    is_template: { type: Boolean, default: true }, // true = plantilla reutilizable
+    is_favorite: { type: Boolean, default: false },
 
-    // Stats (quan es completa)
-    total_volume: Number, // kg total moguts
-    average_rest: Number, // segons promig descans
+    // IA Generated
+    ai_generated: { type: Boolean, default: false },
+    ai_prompt: String, // El prompt que usó el user para generarlo
 
-}, {
-    timestamps: true
-});
+    // Stats
+    times_completed: { type: Number, default: 0 },
+    last_performed: Date,
+    average_rating: Number
 
+}, { timestamps: true });
+
+// Índices
 workoutSchema.index({ user_id: 1, workout_type: 1 });
 workoutSchema.index({ user_id: 1, is_template: 1 });
+workoutSchema.index({ user_id: 1, is_favorite: 1 });
+
+// Método para calcular duración estimada
+workoutSchema.methods.calculateEstimatedDuration = function () {
+    // Implementar lógica: suma sets * tiempo_promedio_serie + descansos
+};
 
 module.exports = mongoose.model('Workout', workoutSchema);
