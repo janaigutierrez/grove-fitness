@@ -52,6 +52,17 @@ const userSchema = new mongoose.Schema({
     goals: [String],
     onboarding_text: String,
 
+    // ============ WEEKLY SCHEDULE ============
+    weekly_schedule: {
+        monday: { type: mongoose.Schema.Types.ObjectId, ref: 'Workout' },
+        tuesday: { type: mongoose.Schema.Types.ObjectId, ref: 'Workout' },
+        wednesday: { type: mongoose.Schema.Types.ObjectId, ref: 'Workout' },
+        thursday: { type: mongoose.Schema.Types.ObjectId, ref: 'Workout' },
+        friday: { type: mongoose.Schema.Types.ObjectId, ref: 'Workout' },
+        saturday: { type: mongoose.Schema.Types.ObjectId, ref: 'Workout' },
+        sunday: { type: mongoose.Schema.Types.ObjectId, ref: 'Workout' }
+    },
+
     // ============ PROGRESS TRACKING ============
     current_weights: {
         type: Map,
