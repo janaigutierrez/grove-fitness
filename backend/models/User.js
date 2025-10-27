@@ -1,12 +1,35 @@
+// models/User.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-    // Basics
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    // ============ AUTH & PROFILE ============
+    name: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    username: {
+        type: String,
+        unique: true,
+        sparse: true, // permet nulls però únic si existeix
+        trim: true,
+        lowercase: true,
+        minlength: 3
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true
+    },
+    password: {
+        type: String,
+        required: true,
+        minlength: 6
+    },
 
-    // Physical data
+    // ============ PHYSICAL DATA ============
     weight: { type: Number },
     height: { type: Number },
     age: { type: Number },
@@ -16,19 +39,28 @@ const userSchema = new mongoose.Schema({
         default: 'beginner'
     },
 
-    // Preferences
+    // ============ PREFERENCES ============
     available_equipment: [String],
-    workout_location: { type: String, enum: ['casa', 'gym'] },
+    workout_location: {
+        type: String,
+        enum: ['casa', 'gym']
+    },
     time_per_session: Number,
     days_per_week: Number,
 
-    // Goals (extracted from onboarding text)
+    // ============ GOALS ============
     goals: [String],
-    onboarding_text: String, // el text lliure original
+    onboarding_text: String,
 
-    // Progress tracking
-    current_weights: { type: Map, of: Number },
-    personal_bests: { type: Map, of: mongoose.Schema.Types.Mixed },
+    // ============ PROGRESS TRACKING ============
+    current_weights: {
+        type: Map,
+        of: Number
+    },
+    personal_bests: {
+        type: Map,
+        of: mongoose.Schema.Types.Mixed
+    },
 
     // ============ AI PREFERENCES ============
     ai_personality: {
@@ -37,31 +69,40 @@ const userSchema = new mongoose.Schema({
         default: 'motivador'
     },
     ai_context_history: [{
-        role: { type: String, enum: ['user', 'assistant'] },
+        role: {
+            type: String,
+            enum: ['user', 'assistant']
+        },
         content: String,
-        timestamp: { type: Date, default: Date.now }
+        timestamp: {
+            type: Date,
+            default: Date.now
+        }
     }],
 
     // ============ AUTH & SECURITY ============
-    // Refresh tokens
     refresh_tokens: [{
         token: String,
-        created_at: { type: Date, default: Date.now },
+        created_at: {
+            type: Date,
+            default: Date.now
+        },
         expires_at: Date,
-        device: String // "iPhone 13", "Web"
+        device: String
     }],
-
-    // Blacklist tokens (para logout)
     blacklisted_tokens: [{
         token: String,
-        blacklisted_at: { type: Date, default: Date.now }
+        blacklisted_at: {
+            type: Date,
+            default: Date.now
+        }
     }]
-
 }, {
     timestamps: true
 });
 
-// Índices
+// ============ ÍNDEXS ============
 userSchema.index({ email: 1 });
+userSchema.index({ username: 1 });
 
 module.exports = mongoose.model('User', userSchema);

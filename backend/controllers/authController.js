@@ -2,6 +2,8 @@ const authService = require('../services/authService');
 
 const register = async (req, res, next) => {
     try {
+        console.log('Body rebut:', req.body); // <-- AFEGEIX AIXÒ
+
         const result = await authService.registerUser(req.body);
         res.json(result);
     } catch (error) {

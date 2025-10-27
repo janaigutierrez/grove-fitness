@@ -14,7 +14,13 @@ const registerUser = async (userData) => {
     const { name, email, password, ...rest } = userData;
 
     // Check if user exists
-    let user = await User.findOne({ email });
+    const { username } = userData;
+    let user = await User.findOne({
+        $or: [
+            { email },
+            ...(username ? [{ username }] : [])
+        ]
+    });
     if (user) {
         const error = new Error('User already exists');
         error.statusCode = 400;
@@ -44,6 +50,7 @@ const registerUser = async (userData) => {
         user: {
             id: user._id.toString(),
             name: user.name,
+            username: user.username,
             email: user.email,
             fitness_level: user.fitness_level
         }

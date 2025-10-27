@@ -7,7 +7,7 @@ const {
     updateExercise,
     deleteExercise
 } = require('../controllers/exerciseController');
-const { validateExercise } = require('../middleware/validation');
+const { validateExercise, validateExerciseUpdate } = require('../middleware/validation');
 const auth = require('../middleware/auth');
 
 // @route   GET /api/exercises
@@ -20,7 +20,7 @@ router.get('/:id', auth, getExercise);
 router.post('/', auth, validateExercise, createExercise);
 
 // @route   PUT /api/exercises/:id
-router.put('/:id', auth, validateExercise, updateExercise);
+router.put('/:id', auth, validateExerciseUpdate, updateExercise);
 
 // @route   DELETE /api/exercises/:id
 router.delete('/:id', auth, deleteExercise);
