@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/database');
+const errorHandler = require('./middleware/errorHandler');
 require('dotenv').config();
 
 // Connect Database
@@ -18,10 +19,12 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/exercises', require('./routes/exercises'));
 app.use('/api/workouts', require('./routes/workouts'));
 app.use('/api/sessions', require('./routes/sessions'));
-app.use('/api/ai', require('./routes/ai')); // 🔥 NUEVA RUTA IA
+app.use('/api/ai', require('./routes/ai'));
 
 // Test route
 app.get('/', (req, res) => res.send('Grove Fitness API Running 🌱'));
+
+app.use(errorHandler);
 
 // Health check
 app.get('/health', (req, res) => {
