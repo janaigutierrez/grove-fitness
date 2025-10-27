@@ -6,32 +6,35 @@ module.exports = async (req, res, next) => {
         const token = req.header('Authorization')?.replace('Bearer ', '');
 
         if (!token) {
-            return res.status(401).json({ msg: 'No token, authorization denied' });
+            return res.status(401).json({
+                success: false,
+                message: 'No token, authorization denied'
+            });
         }
 
-        // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // Check if user exists
         const user = await User.findById(decoded.user.id);
+
         if (!user) {
-            return res.status(401).json({ msg: 'Token is not valid' });
+            return res.status(401).json({
+                success: false,
+                message: 'Token is not valid'
+            });
         }
 
-        // Check if token is blacklisted
-        const isBlacklisted = user.blacklisted_tokens.some(
-            bt => bt.token === token
-        );
+        // Attach user with id (not _id) to req
+        req.user = {
+            id: user._id.toString(),
+            _id: user._id,             // Keep _id for queries
+            email: user.email,
+            name: user.name
+        };
 
-        if (isBlacklisted) {
-            return res.status(401).json({ msg: 'Token has been revoked' });
-        }
-
-        // Attach user to request
-        req.user = user;
         next();
     } catch (error) {
-        console.error('Auth middleware error:', error.message);
-        res.status(401).json({ msg: 'Token is not valid' });
+        res.status(401).json({
+            success: false,
+            message: 'Token is not valid'
+        });
     }
 };
