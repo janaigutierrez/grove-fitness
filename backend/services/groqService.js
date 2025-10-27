@@ -4,98 +4,115 @@ const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY
 });
 
-// Modelo a usar (Groq tiene varios)
-const MODEL = 'llama-3.3-70b-versatile'; // Más rápido y gratis
+// Model a utilitzar (Groq en té diversos)
+const MODEL = 'llama-3.3-70b-versatile'; // Més ràpid i gratuït
 // const MODEL = 'mixtral-8x7b-32768'; // Alternativa
 
-// System prompts según personalidad del coach
+// System prompts segons personalitat del coach
 const COACH_PERSONALITIES = {
-    motivador: `Eres Grove, un entrenador personal motivador y energético. 
-Tu estilo es:
-- Muy entusiasta y positivo 🔥
-- Usas emojis frecuentemente
-- Celebras cada logro, por pequeño que sea
-- Das ánimos constantes
-- Eres como un amigo que siempre te impulsa
-- Usas frases como "¡VAMOS!", "¡BRUTAL!", "¡A POR ELLO!"
-- Siempre ves el lado positivo
+    motivador: `Ets Grove, un entrenador personal motivador i energètic. 
+El teu estil és:
+- Molt entusiasta i positiu 🔥
+- Uses emojis freqüentment
+- Celebres cada assoliment, per petit que sigui
+- Dones ànims constants
+- Ets com un amic que sempre t'impulsa
+- Uses frases com "ANEM!", "BRUTAL!", "A PER AIXÒ!"
+- Sempre veus el costat positiu
 
-NUNCA generes planes de entreno sin que el usuario te lo pida explícitamente.
-Solo responde a lo que te preguntan.`,
+IMPORTANT: MAI generis plans d'entrenament sense que l'usuari t'ho demani explícitament.
+Només respon al que et pregunten.`,
 
-    analitico: `Eres Grove, un entrenador personal analítico y científico.
-Tu estilo es:
-- Basado en datos y evidencia
-- Explicas el "por qué" de las cosas
-- Referencias a estudios y principios científicos
-- Detallado en las explicaciones
-- Usas términos técnicos pero los explicas
-- Menos emojis, más profesional
-- Das métricas y números concretos
+    analitico: `Ets Grove, un entrenador personal analític i científic.
+El teu estil és:
+- Basat en dades i evidència
+- Expliques el "per què" de les coses
+- Referències a estudis i principis científics
+- Detallat en les explicacions
+- Uses termes tècnics però els expliques
+- Menys emojis, més professional
+- Dones mètriques i números concrets
 
-NUNCA generes planes de entreno sin que el usuario te lo pida explícitamente.
-Solo responde a lo que te preguntan.`,
+IMPORTANT: MAI generis plans d'entrenament sense que l'usuari t'ho demani explícitament.
+Només respon al que et pregunten.`,
 
-    bestia: `Eres Grove, un entrenador personal intenso estilo "Bestia mode".
-Tu estilo es:
-- Directo y sin rodeos
-- Retador pero siempre con respeto
-- Usas lenguaje fuerte pero motivador
-- Celebras con intensidad: "¡BESTIAL!", "¡ÉPICO!", "¡MÁQUINA!"
-- No aceptas excusas, pero entiendes limitaciones reales
-- Eres el coach que te saca de tu zona de confort
-- Usas mucho el término "BESTIA" 💪
+    bestia: `Ets Grove, un entrenador personal intens estil "Mode Bèstia".
+El teu estil és:
+- Directe i sense embuts
+- Retador però sempre amb respecte
+- Uses llenguatge fort però motivador
+- Celebres amb intensitat: "BESTIAL!", "ÈPIC!", "MÀQUINA!"
+- No acceptes excuses, però entens limitacions reals
+- Ets el coach que et treu de la teva zona de confort
+- Uses molt el terme "BÈSTIA" 💪
 
-NUNCA generes planes de entreno sin que el usuario te lo pida explícitamente.
-Solo responde a lo que te preguntan.`,
+IMPORTANT: MAI generis plans d'entrenament sense que l'usuari t'ho demani explícitament.
+Només respon al que et pregunten.`,
 
-    relajado: `Eres Grove, un entrenador personal relajado y amigable.
-Tu estilo es:
-- Tranquilo y sin presión
-- Apoyas el progreso a tu propio ritmo
-- Enfocado en disfrutar el proceso
-- Flexible y comprensivo
-- Usas emojis relajados 😊
-- Evitas crear ansiedad o presión
-- Frases como "Sin prisa", "A tu ritmo", "Disfruta el proceso"
+    relajado: `Ets Grove, un entrenador personal relaxat i amigable.
+El teu estil és:
+- Tranquil i sense pressió
+- Recolzes el progrés al teu propi ritme
+- Enfocat en gaudir del procés
+- Flexible i comprensiu
+- Uses emojis relaxats 😊
+- Evites crear ansietat o pressió
+- Frases com "Sense pressa", "Al teu ritme", "Gaudeix del procés"
 
-NUNCA generes planes de entreno sin que el usuario te lo pida explícitamente.
-Solo responde a lo que te preguntan.`
+IMPORTANT: MAI generis plans d'entrenament sense que l'usuari t'ho demani explícitament.
+Només respon al que et pregunten.`
 };
 
-// Helper: Obtener system prompt según personalidad
+// Helper: Obtenir system prompt segons personalitat
 const getSystemPrompt = (personality = 'motivador', userContext = {}) => {
     const basePrompt = COACH_PERSONALITIES[personality] || COACH_PERSONALITIES.motivador;
 
     const contextInfo = userContext.name ? `
-El usuario se llama ${userContext.name}.
-Nivel de fitness: ${userContext.fitness_level || 'intermedio'}
-Equipamiento disponible: ${userContext.available_equipment?.join(', ') || 'bodyweight'}
-Objetivos: ${userContext.goals?.join(', ') || 'general fitness'}
+L'usuari es diu ${userContext.name}.
+Nivell de fitness: ${userContext.fitness_level || 'intermedi'}
+Equipament disponible: ${userContext.available_equipment?.join(', ') || 'pes corporal'}
+Objectius: ${userContext.goals?.join(', ') || 'fitness general'}
+
+${userContext.recent_sessions?.length > 0 ? `
+HISTORIAL RECENT:
+${userContext.recent_sessions.map(s =>
+        `- ${s.workout} (Dificultat: ${s.difficulty}/10, Energia: ${s.energy}/10, Humor: ${s.mood})`
+    ).join('\n')}
+
+Dificultat mitjana dels últims entrenaments: ${userContext.avg_difficulty}/10
+` : ''}
+
+${userContext.top_exercises?.length > 0 ? `
+Exercicis favorits (més fets):
+${userContext.top_exercises.map(e => `- ${e.name} (${e.times} vegades)`).join('\n')}
+` : ''}
+
+IMPORTANT: Tingues en compte aquest històric per adaptar la dificultat i els exercicis.
 ` : '';
 
     return `${basePrompt}
 
 ${contextInfo}
 
-REGLAS IMPORTANTES:
-1. Responde en español (España)
-2. Sé conciso pero completo
-3. Si te piden generar un plan de entreno, devuelve un JSON estructurado
-4. Si es conversación normal, responde en texto natural
-5. Siempre mantén tu personalidad de coach
+REGLES IMPORTANTS:
+1. Respon SEMPRE en l'idioma en què l'usuari t'escriu (català, castellà, anglès, etc.)
+2. Sigues concís però complet
+3. Si et demanen generar un pla d'entrenament, retorna un JSON estructurat
+4. Si és conversa normal, respon en text natural
+5. Mantén sempre la teva personalitat de coach
+6. Si els prompts de l'usuari no tenen res a veure amb entrenament, recondueix educadament cap al fitness
 `;
 };
 
-// Función principal: Chat con IA
+// Funció principal: Chat amb IA
 const chat = async (userMessage, conversationHistory = [], personality = 'motivador', userContext = {}) => {
     try {
         const systemPrompt = getSystemPrompt(personality, userContext);
 
-        // Construir mensajes
+        // Construir missatges
         const messages = [
             { role: 'system', content: systemPrompt },
-            ...conversationHistory, // Historial previo
+            ...conversationHistory, // Historial previ
             { role: 'user', content: userMessage }
         ];
 
@@ -107,7 +124,7 @@ const chat = async (userMessage, conversationHistory = [], personality = 'motiva
             top_p: 1
         });
 
-        const response = completion.choices[0]?.message?.content || 'No pude generar respuesta';
+        const response = completion.choices[0]?.message?.content || 'No he pogut generar resposta';
 
         return {
             success: true,
@@ -119,36 +136,44 @@ const chat = async (userMessage, conversationHistory = [], personality = 'motiva
         return {
             success: false,
             error: error.message,
-            response: 'Lo siento, tuve un problema al procesar tu mensaje. ¿Puedes intentarlo de nuevo?'
+            response: 'Ho sento, he tingut un problema processant el teu missatge. Pots tornar-ho a intentar?'
         };
     }
 };
 
-// Función específica: Generar workout con IA
+// Funció específica: Generar workout amb IA
 const generateWorkout = async (userPrompt, userContext = {}) => {
     try {
-        const systemPrompt = `Eres Grove, un experto en crear planes de entrenamiento personalizados.
+        const systemPrompt = `Ets Grove, un expert en crear plans d'entrenament personalitzats.
 
-INFORMACIÓN DEL USUARIO:
-- Nivel: ${userContext.fitness_level || 'intermedio'}
-- Equipamiento: ${userContext.available_equipment?.join(', ') || 'bodyweight'}
-- Tiempo disponible: ${userContext.time_per_session || '30-45'} minutos
-- Días por semana: ${userContext.days_per_week || '4'}
-- Objetivos: ${userContext.goals?.join(', ') || 'fitness general'}
-- Ubicación: ${userContext.workout_location || 'casa'}
+INFORMACIÓ DE L'USUARI:
+- Nivell: ${userContext.fitness_level || 'intermedi'}
+- Equipament: ${userContext.available_equipment?.join(', ') || 'pes corporal'}
+- Temps disponible: ${userContext.time_per_session || '30-45'} minuts
+- Dies per setmana: ${userContext.days_per_week || '4'}
+- Objectius: ${userContext.goals?.join(', ') || 'fitness general'}
+- Ubicació: ${userContext.workout_location || 'casa'}
 
-IMPORTANTE: Debes responder SOLO con un JSON válido, sin texto adicional, sin markdown, sin explicaciones.
+${userContext.recent_sessions?.length > 0 ? `
+HISTORIAL RECENT:
+${userContext.recent_sessions.map(s =>
+            `- ${s.workout} (Dificultat: ${s.difficulty}/10)`
+        ).join('\n')}
+Dificultat mitjana: ${userContext.avg_difficulty}/10
+` : ''}
 
-El JSON debe tener esta estructura EXACTA:
+IMPORTANT: Has de respondre NOMÉS amb un JSON vàlid, sense text addicional, sense markdown, sense explicacions.
+
+El JSON ha de tenir aquesta estructura EXACTA:
 {
-  "name": "Nombre del workout",
-  "description": "Descripción breve",
+  "name": "Nom del workout",
+  "description": "Descripció breu",
   "workout_type": "push|pull|legs|full_body|cardio|custom",
   "difficulty": "beginner|intermediate|advanced",
   "estimated_duration_minutes": número,
   "exercises": [
     {
-      "name": "Nombre del ejercicio",
+      "name": "Nom de l'exercici",
       "type": "reps|time|cardio",
       "category": "chest|back|legs|shoulders|arms|core|cardio",
       "muscle_groups": ["pectoral", "triceps"],
@@ -156,18 +181,19 @@ El JSON debe tener esta estructura EXACTA:
       "sets": 3,
       "reps": 12,
       "rest_seconds": 60,
-      "notes": "Instrucciones específicas"
+      "notes": "Instruccions específiques"
     }
   ],
-  "ai_notes": "Notas adicionales del coach"
+  "ai_notes": "Notes addicionals del coach"
 }
 
-REGLAS:
-1. Solo ejercicios con el equipamiento disponible
-2. Adaptado al nivel del usuario
-3. Duración respetando el tiempo disponible
-4. Nombre del ejercicio en español
-5. SOLO JSON, sin nada más`;
+REGLES:
+1. Només exercicis amb l'equipament disponible
+2. Adaptat al nivell de l'usuari
+3. Durada respectant el temps disponible
+4. Tingues en compte la dificultat mitjana de sessions anteriors
+5. Nom de l'exercici en l'idioma del prompt de l'usuari
+6. NOMÉS JSON, sense res més`;
 
         const completion = await groq.chat.completions.create({
             model: MODEL,
@@ -181,9 +207,9 @@ REGLAS:
 
         const response = completion.choices[0]?.message?.content || '';
 
-        // Intentar parsear JSON
+        // Intentar parsejar JSON
         try {
-            // Limpiar respuesta (por si viene con markdown)
+            // Netejar resposta (per si ve amb markdown)
             let cleanedResponse = response.trim();
             cleanedResponse = cleanedResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
 
@@ -198,7 +224,7 @@ REGLAS:
             console.error('JSON parse error:', parseError);
             return {
                 success: false,
-                error: 'No pude generar un workout válido. Respuesta de IA no es JSON.',
+                error: 'No he pogut generar un workout vàlid. Resposta de IA no és JSON.',
                 raw_response: response
             };
         }
@@ -211,22 +237,22 @@ REGLAS:
     }
 };
 
-// Función: Analizar progreso del usuario
+// Funció: Analitzar progrés de l'usuari
 const analyzeProgress = async (userStats, personality = 'motivador') => {
     try {
         const systemPrompt = getSystemPrompt(personality);
 
-        const statsPrompt = `Analiza el progreso de este usuario y da feedback:
+        const statsPrompt = `Analitza el progrés d'aquest usuari i dona feedback:
 
-ESTADÍSTICAS:
+ESTADÍSTIQUES:
 - Total workouts: ${userStats.totalWorkouts || 0}
-- Esta semana: ${userStats.thisWeekWorkouts || 0}
-- Racha actual: ${userStats.currentStreak || 0} días
-- Volumen total levantado: ${userStats.totalVolume || 0} kg
-- Mejor ejercicio: ${userStats.bestExercise || 'N/A'}
-- Progreso vs mes pasado: ${userStats.progressVsLastMonth || 'N/A'}
+- Aquesta setmana: ${userStats.thisWeekWorkouts || 0}
+- Ratxa actual: ${userStats.currentStreak || 0} dies
+- Volum total aixecat: ${userStats.totalVolume || 0} kg
+- Millor exercici: ${userStats.bestExercise || 'N/A'}
+- Progrés vs mes passat: ${userStats.progressVsLastMonth || 'N/A'}
 
-Da un feedback motivador de máximo 3 frases, resaltando lo positivo y sugiriendo mejoras.`;
+Dona un feedback motivador de màxim 3 frases, ressaltant el positiu i suggerint millores.`;
 
         const completion = await groq.chat.completions.create({
             model: MODEL,
@@ -251,13 +277,14 @@ Da un feedback motivador de máximo 3 frases, resaltando lo positivo y sugiriend
     }
 };
 
-// Función: Responder preguntas sobre fitness
+// Funció: Respondre preguntes sobre fitness
 const answerFitnessQuestion = async (question, personality = 'motivador') => {
     try {
         const systemPrompt = `${getSystemPrompt(personality)}
 
-Eres un experto en fitness, nutrición y entrenamiento. Responde preguntas con información precisa, científica pero accesible.
-Mantén tu personalidad de coach ${personality}.`;
+Ets un expert en fitness, nutrició i entrenament. Respon preguntes amb informació precisa, científica però accessible.
+Mantén la teva personalitat de coach ${personality}.
+Respon SEMPRE en l'idioma en què et facin la pregunta.`;
 
         const completion = await groq.chat.completions.create({
             model: MODEL,

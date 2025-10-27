@@ -14,6 +14,26 @@ const getUserContext = async (userId) => {
         throw error;
     }
 
+    // AFEGIR HISTÒRIC DE SESSIONS
+    const recentSessions = await WorkoutSession.find({
+        user_id: userId,
+        completed: true
+    })
+        .sort({ completed_at: -1 })
+        .limit(5)
+        .populate('workout_id', 'name workout_type');
+
+    // CALCULAR MITJANA DE DIFICULTAT
+    const avgDifficulty = recentSessions.length > 0
+        ? recentSessions.reduce((sum, s) => sum + (s.perceived_difficulty || 5), 0) / recentSessions.length
+        : 5;
+
+    // EXERCICIS MÉS FETS
+    const topExercises = await Exercise.find({ user_id: userId })
+        .sort({ times_performed: -1 })
+        .limit(5)
+        .select('name times_performed');
+
     return {
         name: user.name,
         fitness_level: user.fitness_level,
@@ -22,7 +42,23 @@ const getUserContext = async (userId) => {
         time_per_session: user.time_per_session,
         days_per_week: user.days_per_week,
         goals: user.goals || [],
-        personality: user.personality_type || 'motivador'
+        personality: user.personality_type || 'motivador',
+
+        // HISTÒRIC
+        recent_sessions: recentSessions.map(s => ({
+            workout: s.workout_id?.name,
+            difficulty: s.perceived_difficulty,
+            energy: s.energy_level,
+            mood: s.mood_after,
+            date: s.completed_at
+        })),
+        avg_difficulty: Math.round(avgDifficulty),
+        top_exercises: topExercises.map(e => ({
+            name: e.name,
+            times: e.times_performed
+        })),
+        personal_bests: user.personal_bests || {},
+        current_weights: user.current_weights || {}
     };
 };
 
@@ -44,14 +80,20 @@ const chatWithAI = async (userId, message) => {
 
     const userContext = await getUserContext(userId);
 
-    // Obtener historial (últimos 10 mensajes)
+    // Obtenir historial (últims 10 missatges)
     const conversationHistory = user.ai_context_history || [];
     const recentHistory = conversationHistory.slice(-10);
+
+    // NETEJAR l'historial eliminant camps de MongoDB
+    const cleanedHistory = recentHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+    }));
 
     // Llamar a Groq
     const result = await groqService.chat(
         message,
-        recentHistory,
+        cleanedHistory,
         userContext.personality,
         userContext
     );
@@ -72,7 +114,7 @@ const chatWithAI = async (userId, message) => {
         { role: 'assistant', content: result.response }
     );
 
-    // Mantener solo últimos 20 mensajes
+    // Mantenir només últims 20 missatges
     if (user.ai_context_history.length > 20) {
         user.ai_context_history = user.ai_context_history.slice(-20);
     }

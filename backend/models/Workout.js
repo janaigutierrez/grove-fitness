@@ -66,8 +66,20 @@ workoutSchema.index({ user_id: 1, is_template: 1 });
 workoutSchema.index({ user_id: 1, is_favorite: 1 });
 
 // Método para calcular duración estimada
+// Método para calcular duración estimada
 workoutSchema.methods.calculateEstimatedDuration = function () {
-    // Implementar lógica: suma sets * tiempo_promedio_serie + descansos
+    let totalMinutes = 0;
+
+    this.exercises.forEach(exercise => {
+        const sets = exercise.custom_sets || 3;
+        const restSeconds = exercise.custom_rest_seconds || 60;
+
+        // Tiempo promedio por serie: 30 segundos
+        const exerciseTime = (sets * 30) + ((sets - 1) * restSeconds);
+        totalMinutes += exerciseTime / 60;
+    });
+
+    return Math.round(totalMinutes);
 };
 
 module.exports = mongoose.model('Workout', workoutSchema);

@@ -63,7 +63,7 @@ const userSchema = new mongoose.Schema({
     },
 
     // ============ AI PREFERENCES ============
-    ai_personality: {
+    personality_type: {
         type: String,
         enum: ['motivador', 'analitico', 'bestia', 'relajado'],
         default: 'motivador'

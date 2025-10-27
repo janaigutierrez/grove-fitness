@@ -22,6 +22,17 @@ module.exports = async (req, res, next) => {
             });
         }
 
+        const isBlacklisted = user.blacklisted_tokens?.some(
+            bt => bt.token === token
+        );
+
+        if (isBlacklisted) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token has been revoked. Please login again.'
+            });
+        }
+
         // Attach user with id (not _id) to req
         req.user = {
             id: user._id.toString(),

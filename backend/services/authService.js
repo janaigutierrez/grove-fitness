@@ -2,14 +2,24 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const generateToken = (userId) => {
-    return jwt.sign(
+// ========== GENERAR TOKENS ==========
+const generateTokens = (userId) => {
+    const accessToken = jwt.sign(
         { user: { id: userId } },
         process.env.JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: '15m' }  // 15 minuts
     );
+
+    const refreshToken = jwt.sign(
+        { user: { id: userId } },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: '30d' }  // 30 dies
+    );
+
+    return { accessToken, refreshToken };
 };
 
+// ========== REGISTER ==========
 const registerUser = async (userData) => {
     const { name, email, password, ...rest } = userData;
 
@@ -21,6 +31,7 @@ const registerUser = async (userData) => {
             ...(username ? [{ username }] : [])
         ]
     });
+
     if (user) {
         const error = new Error('User already exists');
         error.statusCode = 400;
@@ -41,12 +52,22 @@ const registerUser = async (userData) => {
 
     await user.save();
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user._id);
+
+    // Save refresh token
+    user.refresh_tokens.push({
+        token: refreshToken,
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dies
+        device: 'web'
+    });
+    await user.save();
 
     // Return transformed user
     return {
-        token,
+        accessToken,
+        refreshToken,
         user: {
             id: user._id.toString(),
             name: user.name,
@@ -57,6 +78,7 @@ const registerUser = async (userData) => {
     };
 };
 
+// ========== LOGIN ==========
 const loginUser = async (email, password) => {
     // Check user exists
     const user = await User.findOne({ email });
@@ -74,12 +96,22 @@ const loginUser = async (email, password) => {
         throw error;
     }
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user._id);
+
+    // Save refresh token
+    user.refresh_tokens.push({
+        token: refreshToken,
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dies
+        device: 'web'
+    });
+    await user.save();
 
     // Return transformed user
     return {
-        token,
+        accessToken,
+        refreshToken,
         user: {
             id: user._id.toString(),
             name: user.name,
@@ -89,6 +121,7 @@ const loginUser = async (email, password) => {
     };
 };
 
+// ========== GET USER BY ID ==========
 const getUserById = async (userId) => {
     const user = await User.findById(userId).select('-password');
 
@@ -110,8 +143,75 @@ const getUserById = async (userId) => {
     };
 };
 
+// ========== LOGOUT (BLACKLIST TOKEN) ==========
+const blacklistToken = async (userId, token) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // Afegir token a la blacklist
+    if (!user.blacklisted_tokens) {
+        user.blacklisted_tokens = [];
+    }
+
+    user.blacklisted_tokens.push({
+        token: token,
+        blacklisted_at: new Date()
+    });
+
+    await user.save();
+
+    return { message: 'Logout successful' };
+};
+
+// ========== REFRESH ACCESS TOKEN ==========
+const refreshAccessToken = async (refreshToken) => {
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+        const user = await User.findById(decoded.user.id);
+
+        if (!user) {
+            const error = new Error('User not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Verificar que el refresh token existeix i no ha expirat
+        const validToken = user.refresh_tokens.find(
+            rt => rt.token === refreshToken && new Date(rt.expires_at) > new Date()
+        );
+
+        if (!validToken) {
+            const error = new Error('Invalid or expired refresh token');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        // Generar nou access token
+        const newAccessToken = jwt.sign(
+            { user: { id: user._id } },
+            process.env.JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+
+        return {
+            accessToken: newAccessToken
+        };
+    } catch (error) {
+        const err = new Error('Invalid refresh token');
+        err.statusCode = 401;
+        throw err;
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
-    getUserById
+    getUserById,
+    blacklistToken,
+    refreshAccessToken
 };

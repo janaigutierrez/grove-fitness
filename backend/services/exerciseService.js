@@ -14,19 +14,20 @@ const getExercises = async (userId, filters = {}) => {
         id: ex._id.toString(),
         name: ex.name,
         type: ex.type,
-        sets: ex.sets,
-        reps: ex.reps,
-        weight: ex.weight,
-        rest_seconds: ex.rest_seconds,
-        duration_seconds: ex.duration_seconds,
-        distance_km: ex.distance_km,
-        pace: ex.pace,
-        duration_minutes: ex.duration_minutes,
         category: ex.category,
+        muscle_groups: ex.muscle_groups,
+        equipment: ex.equipment,
+        default_sets: ex.default_sets,
+        default_reps: ex.default_reps,
+        default_rest_seconds: ex.default_rest_seconds,
+        default_duration_seconds: ex.default_duration_seconds,
+        default_distance_km: ex.default_distance_km,
         difficulty: ex.difficulty,
-        notes: ex.notes,
+        instructions: ex.instructions,
+        video_url: ex.video_url,
+        is_custom: ex.is_custom,
+        times_performed: ex.times_performed,
         last_performed: ex.last_performed,
-        times_completed: ex.times_completed,
         createdAt: ex.createdAt,
         updatedAt: ex.updatedAt
     }));
@@ -44,23 +45,25 @@ const getExerciseById = async (exerciseId, userId) => {
         throw error;
     }
 
+    // ✅ UN SOLO OBJETO - No usar .map()
     return {
         id: exercise._id.toString(),
         name: exercise.name,
         type: exercise.type,
-        sets: exercise.sets,
-        reps: exercise.reps,
-        weight: exercise.weight,
-        rest_seconds: exercise.rest_seconds,
-        duration_seconds: exercise.duration_seconds,
-        distance_km: exercise.distance_km,
-        pace: exercise.pace,
-        duration_minutes: exercise.duration_minutes,
         category: exercise.category,
+        muscle_groups: exercise.muscle_groups,
+        equipment: exercise.equipment,
+        default_sets: exercise.default_sets,
+        default_reps: exercise.default_reps,
+        default_rest_seconds: exercise.default_rest_seconds,
+        default_duration_seconds: exercise.default_duration_seconds,
+        default_distance_km: exercise.default_distance_km,
         difficulty: exercise.difficulty,
-        notes: exercise.notes,
+        instructions: exercise.instructions,
+        video_url: exercise.video_url,
+        is_custom: exercise.is_custom,
+        times_performed: exercise.times_performed,
         last_performed: exercise.last_performed,
-        times_completed: exercise.times_completed,
         createdAt: exercise.createdAt,
         updatedAt: exercise.updatedAt
     };
@@ -74,21 +77,24 @@ const createExercise = async (userId, exerciseData) => {
 
     await exercise.save();
 
+    // ✅ UN SOLO OBJETO - No usar .map()
     return {
         id: exercise._id.toString(),
         name: exercise.name,
         type: exercise.type,
-        sets: exercise.sets,
-        reps: exercise.reps,
-        weight: exercise.weight,
-        rest_seconds: exercise.rest_seconds,
-        duration_seconds: exercise.duration_seconds,
-        distance_km: exercise.distance_km,
-        pace: exercise.pace,
-        duration_minutes: exercise.duration_minutes,
         category: exercise.category,
+        muscle_groups: exercise.muscle_groups,
+        equipment: exercise.equipment,
+        default_sets: exercise.default_sets,
+        default_reps: exercise.default_reps,
+        default_rest_seconds: exercise.default_rest_seconds,
+        default_duration_seconds: exercise.default_duration_seconds,
+        default_distance_km: exercise.default_distance_km,
         difficulty: exercise.difficulty,
-        notes: exercise.notes,
+        instructions: exercise.instructions,
+        video_url: exercise.video_url,
+        is_custom: exercise.is_custom,
+        times_performed: exercise.times_performed,
         createdAt: exercise.createdAt
     };
 };
@@ -111,21 +117,25 @@ const updateExercise = async (exerciseId, userId, updateData) => {
         { new: true }
     );
 
+    // ✅ UN SOLO OBJETO - No usar .map()
     return {
         id: exercise._id.toString(),
         name: exercise.name,
         type: exercise.type,
-        sets: exercise.sets,
-        reps: exercise.reps,
-        weight: exercise.weight,
-        rest_seconds: exercise.rest_seconds,
-        duration_seconds: exercise.duration_seconds,
-        distance_km: exercise.distance_km,
-        pace: exercise.pace,
-        duration_minutes: exercise.duration_minutes,
         category: exercise.category,
+        muscle_groups: exercise.muscle_groups,
+        equipment: exercise.equipment,
+        default_sets: exercise.default_sets,
+        default_reps: exercise.default_reps,
+        default_rest_seconds: exercise.default_rest_seconds,
+        default_duration_seconds: exercise.default_duration_seconds,
+        default_distance_km: exercise.default_distance_km,
         difficulty: exercise.difficulty,
-        notes: exercise.notes,
+        instructions: exercise.instructions,
+        video_url: exercise.video_url,
+        is_custom: exercise.is_custom,
+        times_performed: exercise.times_performed,
+        last_performed: exercise.last_performed,
         updatedAt: exercise.updatedAt
     };
 };

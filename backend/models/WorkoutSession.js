@@ -71,8 +71,22 @@ workoutSessionSchema.index({ user_id: 1, workout_id: 1, started_at: -1 });
 workoutSessionSchema.index({ user_id: 1, completed: 1 });
 
 // Método para calcular volumen
+// Método para calcular volumen
 workoutSessionSchema.methods.calculateTotalVolume = function () {
-    // Implementar lógica
+    let totalVolume = 0;
+
+    this.exercises_performed.forEach(exercise => {
+        exercise.sets_completed.forEach(set => {
+            if (set.weight_used && set.weight_used !== 'corporal') {
+                const weight = parseFloat(set.weight_used.replace(/[^0-9.]/g, ''));
+                if (!isNaN(weight) && set.reps_completed) {
+                    totalVolume += weight * set.reps_completed;
+                }
+            }
+        });
+    });
+
+    return Math.round(totalVolume);
 };
 
 module.exports = mongoose.model('WorkoutSession', workoutSessionSchema);
