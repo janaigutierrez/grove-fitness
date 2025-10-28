@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TextInput, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import ProgressBar from '../../components/common/ProgressBar';
-import Header from '../../components/common/Header';
+import ProgressBar from '../components/common/ProgressBar';
+import Header from '../components/common/Header';
 
 export default function DashboardScreen() {
   return (
