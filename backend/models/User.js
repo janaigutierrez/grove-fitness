@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     username: {
         type: String,
         unique: true,
-        sparse: true, // permet nulls però únic si existeix
+        required: true,
         trim: true,
         lowercase: true,
         minlength: 3
@@ -64,6 +64,11 @@ const userSchema = new mongoose.Schema({
     },
 
     // ============ PROGRESS TRACKING ============
+    weight_history: [{
+        weight: { type: Number, required: true },
+        date: { type: Date, default: Date.now }
+    }],
+
     current_weights: {
         type: Map,
         of: Number
@@ -72,6 +77,9 @@ const userSchema = new mongoose.Schema({
         type: Map,
         of: mongoose.Schema.Types.Mixed
     },
+
+    // ============ AVATAR ============
+    avatar_url: String,
 
     // ============ AI PREFERENCES ============
     personality_type: {

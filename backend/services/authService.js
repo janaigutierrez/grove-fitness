@@ -21,27 +21,57 @@ const generateTokens = (userId) => {
 
 // ========== REGISTER ==========
 const registerUser = async (userData) => {
-    const { name, email, password, ...rest } = userData;
+    const { name, username, email, password, ...rest } = userData;
 
-    // Check if user exists
-    const { username } = userData;
+    // Validacions
+    if (!name || !username || !email || !password) {
+        const error = new Error('Name, username, email and password are required');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // Username: només lletres, números, guions i guions baixos
+    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!usernameRegex.test(username)) {
+        const error = new Error('Username can only contain letters, numbers, hyphens and underscores');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // Username mínim 3 caràcters
+    if (username.length < 3) {
+        const error = new Error('Username must be at least 3 characters long');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // Check if user exists (email o username)
     let user = await User.findOne({
         $or: [
-            { email },
-            ...(username ? [{ username }] : [])
+            { email: email.toLowerCase() },
+            { username: username.toLowerCase() }
         ]
     });
 
     if (user) {
-        const error = new Error('User already exists');
-        error.statusCode = 400;
-        throw error;
+        // Determinar què existeix
+        if (user.email.toLowerCase() === email.toLowerCase()) {
+            const error = new Error('Email already exists');
+            error.statusCode = 400;
+            throw error;
+        }
+        if (user.username.toLowerCase() === username.toLowerCase()) {
+            const error = new Error('Username already taken');
+            error.statusCode = 400;
+            throw error;
+        }
     }
 
     // Create user
     user = new User({
         name,
-        email,
+        username: username.toLowerCase(), // Guardar en minúscules per consistència
+        email: email.toLowerCase(),
         password,
         ...rest
     });
@@ -81,7 +111,7 @@ const registerUser = async (userData) => {
 // ========== LOGIN ==========
 const loginUser = async (email, password) => {
     // Check user exists
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
         const error = new Error('Invalid credentials');
         error.statusCode = 400;
@@ -115,6 +145,7 @@ const loginUser = async (email, password) => {
         user: {
             id: user._id.toString(),
             name: user.name,
+            username: user.username,
             email: user.email,
             fitness_level: user.fitness_level
         }
@@ -135,6 +166,7 @@ const getUserById = async (userId) => {
     return {
         id: user._id.toString(),
         name: user.name,
+        username: user.username,
         email: user.email,
         fitness_level: user.fitness_level,
         weight: user.weight,

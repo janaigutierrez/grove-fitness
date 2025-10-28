@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import ProgressCard from '../../components/common/ProgressCard';
+import ProgressCard from '../components/common/ProgressCard';
 
 export default function ProgressScreen() {
   // TUS DATOS REALES DE TRANSFORMACIÓN
