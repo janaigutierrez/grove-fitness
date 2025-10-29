@@ -8,79 +8,41 @@ import {
   Modal,
   Alert,
   ImageBackground,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  getWorkouts,
+  getWeeklySchedule,
+  startWorkoutSession,
+  updateSession,
+  completeWorkoutSession,
+  abandonSession
+} from '../services/api';
+import { handleApiError } from '../utils/errorHandler';
 
-// TUS DATOS REALES 💪
-const realWorkouts = [
-  {
-    id: 1,
-    title: 'LUNES - PUSH',
-    description: 'Pectorals, hombros y tríceps',
-    duration: '30-35 min',
-    level: 'Bestia 🔥',
-    exercises: [
-      { name: 'Flexiones tabla (CHEST)', sets: 4, reps: '12-15', weight: 'corporal' },
-      { name: 'Low to High Fly ⭐', sets: 3, reps: '8-10', weight: '5kg' },
-      { name: 'Aperturas suelo ⭐', sets: 3, reps: '10-12', weight: '5kg' },
-      { name: 'Close Push Up', sets: 3, reps: '8-10', weight: 'corporal' },
-      { name: 'Plancha militar', sets: 3, reps: '30-45s', weight: '-' },
-      { name: 'Crunches con peso', sets: 3, reps: '15-20', weight: '5kg' }
-    ]
-  },
-  {
-    id: 2,
-    title: 'MARTES - PULL',
-    description: 'Dominadas + espalda + bíceps',
-    duration: '35-40 min',
-    level: 'Bestia 🔥',
-    exercises: [
-      { name: 'Dominadas agarre ancho', sets: 4, reps: '5+', weight: 'corporal' },
-      { name: 'Dominadas agarre estrecho', sets: 3, reps: '5+', weight: 'corporal' },
-      { name: 'Remo invertido', sets: 4, reps: '10-12', weight: 'corporal' },
-      { name: 'Pull aparts gomas', sets: 3, reps: '10-15', weight: '25kg' },
-      { name: 'Shrugs intensos', sets: 3, reps: '12-15', weight: '6kg' }
-    ]
-  },
-  {
-    id: 3,
-    title: 'JUEVES - LOWER',
-    description: 'Piernas + glúteos',
-    duration: '28-32 min',
-    level: 'Bestia 🔥',
-    exercises: [
-      { name: 'Sentadillas goblet ⭐', sets: 4, reps: '12-15', weight: '6kg' },
-      { name: 'Peso muerto rumano', sets: 4, reps: '10-12', weight: '6kg' },
-      { name: 'Sentadillas profundas', sets: 3, reps: '10-12', weight: 'corporal' },
-      { name: 'Zancadas alternas', sets: 3, reps: '8 c/pierna', weight: '4kg' },
-      { name: 'Elevaciones pantorrillas', sets: 3, reps: '15-20', weight: '6kg' }
-    ]
-  },
-  {
-    id: 4,
-    title: 'VIERNES - FULL BODY PUMP',
-    description: 'Todo el cuerpo + pump',
-    duration: '25-30 min',
-    level: 'Bestia 🔥',
-    exercises: [
-      { name: 'Dominadas', sets: 2, reps: 'máx reps', weight: 'corporal' },
-      { name: 'Flexiones tabla', sets: 2, reps: '15', weight: 'corporal' },
-      { name: 'Sentadillas goblet', sets: 2, reps: '15', weight: '5kg' },
-      { name: 'Low to High Fly', sets: 2, reps: '10', weight: '4kg' },
-      { name: 'Plancha', sets: 2, reps: '30s', weight: '-' }
-    ]
-  }
-];
+export default function WorkoutScreen({ user }) {
+  // Estados principals
+  const [workouts, setWorkouts] = useState([]);
+  const [weekSchedule, setWeekSchedule] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-export default function WorkoutScreen({ token }) {
-  const [selectedWorkout, setSelectedWorkout] = useState(null);
+  // Modal d'entrenament
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedWorkout, setSelectedWorkout] = useState(null);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
   const [currentExercise, setCurrentExercise] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
   const [restTimer, setRestTimer] = useState(0);
-  const [workoutStarted, setWorkoutStarted] = useState(false);
+  const [completedSets, setCompletedSets] = useState([]);
+
+  useEffect(() => {
+    loadWorkoutData();
+  }, []);
 
   // Timer de descanso
   useEffect(() => {
@@ -89,7 +51,7 @@ export default function WorkoutScreen({ token }) {
       interval = setInterval(() => {
         setRestTimer(prev => {
           if (prev <= 1) {
-            Alert.alert("⏰ ¡Descanso terminado!", "¡Siguiente serie!");
+            Alert.alert("⏰ Descanso terminado!", "¡Siguiente serie!");
             return 0;
           }
           return prev - 1;
@@ -99,79 +61,199 @@ export default function WorkoutScreen({ token }) {
     return () => clearInterval(interval);
   }, [restTimer]);
 
-  const startWorkout = (workout) => {
-    setSelectedWorkout(workout);
-    setModalVisible(true);
-    setCurrentExercise(0);
-    setCurrentSet(1);
-    setWorkoutStarted(true);
+  const loadWorkoutData = async () => {
+    try {
+      setLoading(true);
 
-    Alert.alert(
-      "🔥 ¡SESIÓN INICIADA!",
-      `Entrenamiento: ${workout.title}\nDuración: ${workout.duration}\n\n¡A por esas SUPER TETAS!`,
-      [{ text: "¡DALE CAÑA!", style: "default" }]
-    );
-  };
+      const [workoutsData, scheduleData] = await Promise.all([
+        getWorkouts({ is_template: 'true' }), // Solo plantillas
+        getWeeklySchedule()
+      ]);
 
-  const completeSet = () => {
-    const totalSets = selectedWorkout.exercises[currentExercise].sets;
+      console.log('✅ Workouts carregats:', workoutsData);
+      console.log('✅ Schedule carregat:', scheduleData);
 
-    if (currentSet < totalSets) {
-      setCurrentSet(currentSet + 1);
-      setRestTimer(60); // 60 segundos descanso
-    } else if (currentExercise < selectedWorkout.exercises.length - 1) {
-      setCurrentExercise(currentExercise + 1);
-      setCurrentSet(1);
-      Alert.alert("✅ Ejercicio completado", "¡Siguiente ejercicio!");
-    } else {
-      completeWorkout();
+      setWorkouts(workoutsData);
+      setWeekSchedule(scheduleData);
+
+    } catch (error) {
+      console.error('❌ Error carregant workouts:', error);
+      const errorInfo = handleApiError(error);
+      Alert.alert(errorInfo.title, errorInfo.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const completeWorkout = () => {
-    Alert.alert(
-      "🎉 ¡ENTRENAMIENTO COMPLETADO!",
-      `¡BESTIAL! Has terminado ${selectedWorkout.title}\n\n🔥 +1 hacia las SUPER TETAS\n💪 Consistency mantenida\n\n¡Un paso más cerca del objetivo!`,
-      [
-        {
-          text: "🚀 ¡BRUTAL!",
-          onPress: () => {
-            setModalVisible(false);
-            setWorkoutStarted(false);
-          }
-        }
-      ]
-    );
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadWorkoutData();
   };
 
-  const abandonWorkout = () => {
+  const startWorkout = async (workout) => {
+    try {
+      console.log('🏋️ Iniciant workout:', workout.name);
+
+      // Crear sessió al backend
+      const session = await startWorkoutSession(workout.id);
+
+      console.log('✅ Sessió creada:', session);
+
+      setCurrentSessionId(session.id);
+      setSelectedWorkout(workout);
+      setCurrentExercise(0);
+      setCurrentSet(1);
+      setCompletedSets([]);
+      setModalVisible(true);
+
+      Alert.alert(
+        "🔥 SESSIÓ INICIADA!",
+        `Entrenament: ${workout.name}\nDurada estimada: ${workout.estimated_duration || 30} min\n\n¡A per elles!`,
+        [{ text: "¡DALE!", style: "default" }]
+      );
+
+    } catch (error) {
+      console.error('❌ Error iniciant workout:', error);
+      const errorInfo = handleApiError(error);
+      Alert.alert(errorInfo.title, errorInfo.message);
+    }
+  };
+
+  const completeSet = () => {
+    const exercise = selectedWorkout.exercises[currentExercise];
+    const totalSets = exercise.custom_sets || exercise.exercise_id.default_sets || 3;
+
+    // Guardar set completat
+    const newCompletedSet = {
+      exercise_index: currentExercise,
+      set_number: currentSet,
+      completed_at: new Date().toISOString()
+    };
+
+    setCompletedSets([...completedSets, newCompletedSet]);
+
+    if (currentSet < totalSets) {
+      // Següent sèrie del mateix exercici
+      setCurrentSet(currentSet + 1);
+      setRestTimer(exercise.custom_rest_seconds || exercise.exercise_id.default_rest_seconds || 60);
+    } else if (currentExercise < selectedWorkout.exercises.length - 1) {
+      // Següent exercici
+      setCurrentExercise(currentExercise + 1);
+      setCurrentSet(1);
+      Alert.alert("✅ Exercici completat", "¡Següent exercici!");
+    } else {
+      // Workout completat
+      handleCompleteWorkout();
+    }
+  };
+
+  const handleCompleteWorkout = async () => {
+    try {
+      Alert.alert(
+        "💪 Completar Entrenament",
+        "Com t'has sentit?",
+        [
+          {
+            text: "Cancel·lar",
+            style: "cancel"
+          },
+          {
+            text: "Completar",
+            onPress: async () => {
+              try {
+                // Completar sessió al backend
+                const sessionData = {
+                  perceived_difficulty: 7, // Podries demanar això amb un slider
+                  energy_level: 8,
+                  mood_after: 'great',
+                  notes: 'Entrenament completat des de l\'app'
+                };
+
+                await completeWorkoutSession(currentSessionId, sessionData);
+
+                Alert.alert(
+                  "🎉 ENTRENAMENT COMPLETAT!",
+                  `¡BRUTAL! Has acabat ${selectedWorkout.name}\n\n🔥 +1 cap als teus objectius\n💪 Progressió registrada\n\n¡Un pas més a prop!`,
+                  [
+                    {
+                      text: "🚀 GENIAL!",
+                      onPress: () => {
+                        setModalVisible(false);
+                        loadWorkoutData(); // Recarregar per actualitzar stats
+                      }
+                    }
+                  ]
+                );
+
+              } catch (error) {
+                console.error('❌ Error completant sessió:', error);
+                const errorInfo = handleApiError(error);
+                Alert.alert(errorInfo.title, errorInfo.message);
+              }
+            }
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('❌ Error:', error);
+    }
+  };
+
+  const handleAbandonWorkout = () => {
     Alert.alert(
-      "❌ Abandonar Entrenamiento",
-      "¿Seguro que quieres parar? ¡Estás tan cerca de las SUPER TETAS!",
+      "❌ Abandonar Entrenament",
+      "Segur que vols parar? Estàs tan a prop!",
       [
         { text: "Continuar", style: "cancel" },
         {
           text: "Abandonar",
           style: "destructive",
-          onPress: () => {
-            setModalVisible(false);
-            setWorkoutStarted(false);
+          onPress: async () => {
+            try {
+              await abandonSession(currentSessionId, "Abandonat per l'usuari");
+              setModalVisible(false);
+              Alert.alert("Info", "Sessió abandonada. Torna-ho a intentar aviat!");
+            } catch (error) {
+              console.error('❌ Error abandonant sessió:', error);
+              // Tanquem igualment
+              setModalVisible(false);
+            }
           }
         }
       ]
     );
   };
 
-  // Calendario semanal con TU rutina real
-  const weekSchedule = [
-    { day: 'LUN', workout: realWorkouts[0], active: true, today: true },
-    { day: 'MAR', workout: realWorkouts[1], active: true, today: false },
-    { day: 'MIE', workout: null, active: false, rest: 'Descanso', today: false },
-    { day: 'JUE', workout: realWorkouts[2], active: true, today: false },
-    { day: 'VIE', workout: realWorkouts[3], active: true, today: false },
-    { day: 'SAB', workout: null, active: false, rest: 'Cardio', today: false },
-    { day: 'DOM', workout: null, active: false, rest: 'Rest', today: false }
-  ];
+  // Generar calendari setmanal
+  const getDaySchedule = () => {
+    if (!weekSchedule) return [];
+
+    const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayNames = ['DL', 'DM', 'DC', 'DJ', 'DV', 'DS', 'DG'];
+    const today = new Date().getDay(); // 0 = diumenge
+    const todayIndex = today === 0 ? 6 : today - 1; // Convertir a índex 0-6 (dilluns=0)
+
+    return daysOfWeek.map((day, index) => ({
+      day: dayNames[index],
+      dayKey: day,
+      workout: weekSchedule[day],
+      active: !!weekSchedule[day],
+      today: index === todayIndex
+    }));
+  };
+
+  if (loading) {
+    return (
+      <LinearGradient colors={['#4CAF50', '#2D5016']} style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="white" />
+          <Text style={{ color: 'white', marginTop: 10 }}>Carregant workouts...</Text>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient colors={['#4CAF50', '#2D5016']} style={{ flex: 1 }}>
@@ -181,15 +263,26 @@ export default function WorkoutScreen({ token }) {
         resizeMode="repeat"
       >
         <SafeAreaView style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.header}>🏋️‍♂️ Tu Rutina 4 Días</Text>
-            <Text style={styles.subtitle}>Semana 12 - Nivel Bestia 🔥</Text>
+          <ScrollView
+            contentContainerStyle={styles.container}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="white"
+              />
+            }
+          >
+            <Text style={styles.header}>🏋️‍♂️ Els teus Workouts</Text>
+            <Text style={styles.subtitle}>
+              {workouts.length} workouts disponibles
+            </Text>
 
-            {/* Calendario semanal */}
+            {/* Calendari setmanal */}
             <View style={styles.weekContainer}>
-              <Text style={styles.weekTitle}>📅 Esta Semana:</Text>
+              <Text style={styles.weekTitle}>📅 Aquesta Setmana:</Text>
               <View style={styles.weekGrid}>
-                {weekSchedule.map((item, index) => (
+                {getDaySchedule().map((item, index) => (
                   <TouchableOpacity
                     key={index}
                     style={[
@@ -197,14 +290,19 @@ export default function WorkoutScreen({ token }) {
                       item.active ? styles.workoutDay : styles.restDay,
                       item.today ? styles.todayHighlight : null
                     ]}
-                    onPress={() => item.workout ? startWorkout(item.workout) : null}
+                    onPress={() => {
+                      if (item.workout) {
+                        const workout = workouts.find(w => w.id === item.workout.id);
+                        if (workout) startWorkout(workout);
+                      }
+                    }}
                     disabled={!item.active}
                   >
                     <Text style={[styles.dayText, item.today ? styles.todayText : null]}>
                       {item.day}
                     </Text>
                     <Text style={styles.dayDescription}>
-                      {item.workout ? item.workout.title.split(' - ')[1] : item.rest}
+                      {item.workout ? item.workout.name.split(' - ')[1] || item.workout.name.substring(0, 8) : 'Rest'}
                     </Text>
                     {item.active && (
                       <Ionicons name="play-circle" size={16} color="#4CAF50" />
@@ -214,88 +312,117 @@ export default function WorkoutScreen({ token }) {
               </View>
             </View>
 
-            {/* Lista entrenamientos con TODOS los ejercicios visibles */}
-            <Text style={styles.sectionTitle}>💪 Entrenamientos:</Text>
+            {/* Llista de workouts */}
+            <Text style={styles.sectionTitle}>💪 Tots els Workouts:</Text>
 
-            {realWorkouts.map((workout) => (
-              <View key={workout.id} style={styles.workoutCard}>
-                {/* Header con icono y título */}
-                <View style={styles.cardHeader}>
-                  <Ionicons name="barbell" size={22} color="#4CAF50" />
-                  <Text style={styles.cardTitle}>{workout.title}</Text>
-                </View>
-
-                {/* Badges informativos */}
-                <View style={styles.badgesRow}>
-                  <Text style={styles.badge}>⏱ {workout.duration}</Text>
-                  <Text style={styles.badge}>🔥 {workout.level}</Text>
-                  <Text style={styles.badge}>{workout.exercises.length} ejercicios</Text>
-                </View>
-
-                <Text style={styles.cardDescription}>{workout.description}</Text>
-
-                {/* EJERCICIOS VISIBLES - ESTO FALTABA */}
-                <View style={styles.exerciseList}>
-                  <Text style={styles.exerciseListTitle}>Ejercicios:</Text>
-                  {workout.exercises.map((exercise, idx) => (
-                    <View key={idx} style={styles.exerciseItem}>
-                      <Text style={styles.exerciseName}>
-                        {exercise.name.includes('⭐') ? '⭐ ' : '• '}{exercise.name.replace('⭐', '')}
-                      </Text>
-                      <Text style={styles.exerciseDetails}>
-                        {exercise.sets}x{exercise.reps} {exercise.weight !== '-' && exercise.weight !== 'corporal' ? `(${exercise.weight})` : ''}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Botón empezar */}
-                <TouchableOpacity
-                  style={styles.cardButton}
-                  onPress={() => startWorkout(workout)}
-                >
-                  <Ionicons name="play" size={18} color="white" />
-                  <Text style={styles.cardButtonText}>EMPEZAR</Text>
-                </TouchableOpacity>
+            {workouts.length === 0 ? (
+              <View style={styles.noWorkouts}>
+                <Ionicons name="barbell-outline" size={64} color="rgba(255,255,255,0.3)" />
+                <Text style={styles.noWorkoutsText}>Encara no tens workouts</Text>
+                <Text style={styles.noWorkoutsSubtext}>Crea'n un o genera'n un amb IA!</Text>
               </View>
-            ))}
+            ) : (
+              workouts.map((workout) => (
+                <View key={workout.id} style={styles.workoutCard}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="barbell" size={22} color="#4CAF50" />
+                    <Text style={styles.cardTitle}>{workout.name}</Text>
+                  </View>
+
+                  <View style={styles.badgesRow}>
+                    <Text style={styles.badge}>
+                      ⏱ {workout.estimated_duration || 30} min
+                    </Text>
+                    <Text style={styles.badge}>
+                      🔥 {workout.difficulty || 'intermediate'}
+                    </Text>
+                    <Text style={styles.badge}>
+                      {workout.exercises?.length || 0} exercicis
+                    </Text>
+                  </View>
+
+                  {workout.description && (
+                    <Text style={styles.cardDescription}>{workout.description}</Text>
+                  )}
+
+                  {/* Exercicis */}
+                  {workout.exercises && workout.exercises.length > 0 && (
+                    <View style={styles.exerciseList}>
+                      <Text style={styles.exerciseListTitle}>Exercicis:</Text>
+                      {workout.exercises.slice(0, 3).map((ex, idx) => (
+                        <View key={idx} style={styles.exerciseItem}>
+                          <Text style={styles.exerciseName}>
+                            • {ex.exercise_id?.name || 'Exercici'}
+                          </Text>
+                          <Text style={styles.exerciseDetails}>
+                            {ex.custom_sets || ex.exercise_id?.default_sets || 3}x
+                            {ex.custom_reps || ex.exercise_id?.default_reps || 10}
+                          </Text>
+                        </View>
+                      ))}
+                      {workout.exercises.length > 3 && (
+                        <Text style={styles.moreExercises}>
+                          +{workout.exercises.length - 3} més...
+                        </Text>
+                      )}
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.cardButton}
+                    onPress={() => startWorkout(workout)}
+                  >
+                    <Ionicons name="play" size={18} color="white" />
+                    <Text style={styles.cardButtonText}>COMENÇAR</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
           </ScrollView>
 
-          {/* MODAL FUNCIONAL - TU DISEÑO ANTERIOR MEJORADO */}
+          {/* MODAL D'ENTRENAMENT */}
           <Modal visible={modalVisible} animationType="slide" transparent={false}>
             <LinearGradient colors={['#2D5016', '#4CAF50']} style={{ flex: 1 }}>
               <SafeAreaView style={styles.modalContainer}>
                 <View style={styles.modalHeader}>
-                  <TouchableOpacity onPress={abandonWorkout} style={styles.closeButton}>
+                  <TouchableOpacity onPress={handleAbandonWorkout} style={styles.closeButton}>
                     <Ionicons name="close" size={24} color="white" />
                   </TouchableOpacity>
-                  <Text style={styles.modalTitle}>{selectedWorkout?.title}</Text>
+                  <Text style={styles.modalTitle}>{selectedWorkout?.name}</Text>
                   <Text style={styles.modalProgress}>
-                    Ejercicio {currentExercise + 1}/{selectedWorkout?.exercises.length}
+                    Exercici {currentExercise + 1}/{selectedWorkout?.exercises?.length || 0}
                   </Text>
                 </View>
 
-                {selectedWorkout && (
+                {selectedWorkout && selectedWorkout.exercises && selectedWorkout.exercises[currentExercise] && (
                   <View style={styles.exerciseContainer}>
-                    <Text style={styles.exerciseName}>
-                      {selectedWorkout.exercises[currentExercise].name}
+                    <Text style={styles.exerciseNameModal}>
+                      {selectedWorkout.exercises[currentExercise].exercise_id?.name || 'Exercici'}
                     </Text>
 
                     <View style={styles.setInfo}>
                       <Text style={styles.setCounter}>
-                        Serie {currentSet} de {selectedWorkout.exercises[currentExercise].sets}
+                        Sèrie {currentSet} de{' '}
+                        {selectedWorkout.exercises[currentExercise].custom_sets ||
+                          selectedWorkout.exercises[currentExercise].exercise_id?.default_sets ||
+                          3}
                       </Text>
                       <Text style={styles.repsInfo}>
-                        {selectedWorkout.exercises[currentExercise].reps} repeticiones
+                        {selectedWorkout.exercises[currentExercise].custom_reps ||
+                          selectedWorkout.exercises[currentExercise].exercise_id?.default_reps ||
+                          10}{' '}
+                        repeticions
                       </Text>
-                      <Text style={styles.weightInfo}>
-                        Peso: {selectedWorkout.exercises[currentExercise].weight}
-                      </Text>
+                      {selectedWorkout.exercises[currentExercise].custom_weight && (
+                        <Text style={styles.weightInfo}>
+                          Pes: {selectedWorkout.exercises[currentExercise].custom_weight}
+                        </Text>
+                      )}
                     </View>
 
                     {restTimer > 0 && (
                       <View style={styles.restContainer}>
-                        <Text style={styles.restTitle}>⏱️ Descanso:</Text>
+                        <Text style={styles.restTitle}>⏱️ Descans:</Text>
                         <Text style={styles.restTimer}>{restTimer}s</Text>
                       </View>
                     )}
@@ -307,21 +434,24 @@ export default function WorkoutScreen({ token }) {
                         disabled={restTimer > 0}
                       >
                         <Text style={styles.actionButtonText}>
-                          {currentSet < selectedWorkout.exercises[currentExercise].sets ?
-                            '✅ Serie Completada' :
-                            currentExercise < selectedWorkout.exercises.length - 1 ?
-                              '➡️ Siguiente Ejercicio' :
-                              '🎉 Terminar Entreno'
-                          }
+                          {currentSet < (selectedWorkout.exercises[currentExercise].custom_sets ||
+                            selectedWorkout.exercises[currentExercise].exercise_id?.default_sets ||
+                            3)
+                            ? '✅ Sèrie Completada'
+                            : currentExercise < selectedWorkout.exercises.length - 1
+                              ? '➡️ Següent Exercici'
+                              : '🎉 Acabar Entreno'}
                         </Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.skipButton]}
-                        onPress={() => setRestTimer(0)}
-                      >
-                        <Text style={styles.actionButtonText}>⏭️ Saltar Descanso</Text>
-                      </TouchableOpacity>
+                      {restTimer > 0 && (
+                        <TouchableOpacity
+                          style={[styles.actionButton, styles.skipButton]}
+                          onPress={() => setRestTimer(0)}
+                        >
+                          <Text style={styles.actionButtonText}>⏭️ Saltar Descans</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 )}
@@ -342,6 +472,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     marginBottom: 5,
+    marginTop: 10,
   },
   subtitle: {
     fontSize: 16,
@@ -392,7 +523,7 @@ const styles = StyleSheet.create({
   },
   dayDescription: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 10,
+    fontSize: 9,
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -401,6 +532,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     marginBottom: 15,
+  },
+  noWorkouts: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+  },
+  noWorkoutsText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginTop: 15,
+    marginBottom: 5,
+  },
+  noWorkoutsSubtext: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
   },
   workoutCard: {
     backgroundColor: 'white',
@@ -416,13 +565,14 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10
+    marginBottom: 10,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 8,
     color: '#2D5016',
+    flex: 1,
   },
   badgesRow: {
     flexDirection: 'row',
@@ -442,7 +592,7 @@ const styles = StyleSheet.create({
   cardDescription: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 12
+    marginBottom: 12,
   },
   exerciseList: {
     backgroundColor: '#f8f9fa',
@@ -451,7 +601,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   exerciseListTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#2D5016',
     marginBottom: 8,
@@ -463,15 +613,20 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   exerciseName: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#333',
     flex: 1,
-    fontWeight: '500',
   },
   exerciseDetails: {
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
+  },
+  moreExercises: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   cardButton: {
     flexDirection: 'row',
@@ -503,12 +658,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
     padding: 8,
+    zIndex: 10,
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
     marginTop: 10,
+    textAlign: 'center',
   },
   modalProgress: {
     fontSize: 16,
@@ -521,7 +678,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  exerciseName: {
+  exerciseNameModal: {
     fontSize: 26,
     fontWeight: 'bold',
     color: 'white',

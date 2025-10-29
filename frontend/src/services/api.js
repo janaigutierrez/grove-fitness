@@ -1,188 +1,308 @@
-// frontend/src/services/api.js
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ApiError } from '../utils/errorHandler';
 
-// Detectar plataforma per usar la IP correcta
-const getBaseUrl = () => {
-    if (Platform.OS === 'web') {
-        return 'http://localhost:5000/api'; // Per navegador
+// ============ CONFIGURACIÓ ============
+const API_CONFIG = {
+    development: {
+        web: 'http://localhost:5000/api',
+        mobile: 'http://192.168.1.138:5000/api' // CANVIA AIXÒ segons la teva IP
+    },
+    production: {
+        web: 'https://tu-api.com/api',
+        mobile: 'https://tu-api.com/api'
     }
-    return 'http://192.168.1.138:5000/api'; // Per mòbil (Expo Go)
+};
+
+const ENV = 'development'; // Canviar a 'production' en producció
+
+const getBaseUrl = () => {
+    const platform = Platform.OS === 'web' ? 'web' : 'mobile';
+    return API_CONFIG[ENV][platform];
 };
 
 const BASE_URL = getBaseUrl();
 
-console.log('🌐 BASE_URL:', BASE_URL);
+console.log('🌐 API URL:', BASE_URL);
 
-// ====== FUNCIONS AUTENTICACIÓ ======
-export async function login(email, password) {
-    console.log('📤 LOGIN: Enviant a', `${BASE_URL}/auth/login`);
+// ============ FUNCIÓ FETCH CENTRALITZADA ============
+const fetchWithAuth = async (endpoint, options = {}) => {
+    const url = `${BASE_URL}${endpoint}`;
 
-    const res = await fetch(`${BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-    });
+    // Obtenir token si existeix
+    const token = await AsyncStorage.getItem('token');
 
-    const data = await res.json();
-    console.log('📥 LOGIN: Resposta', data);
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+    };
 
-    if (!res.ok) throw new Error(data.msg || 'Error al iniciar sessió');
-    return data;
-}
-
-export async function register(userData) {
-    console.log('📤 REGISTER: Enviant a', `${BASE_URL}/auth/register`);
-    console.log('📤 REGISTER: Dades', { ...userData, password: '***' });
-
-    const res = await fetch(`${BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-    });
-
-    const data = await res.json();
-    console.log('📥 REGISTER: Resposta status', res.status);
-    console.log('📥 REGISTER: Resposta data', data);
-
-    if (!res.ok) throw new Error(data.msg || 'Error al registrar-se');
-    return data;
-}
-
-// ====== FUNCIONS WORKOUTS ======
-export async function getWorkouts(token) {
-    console.log('📤 GET WORKOUTS: Enviant a', `${BASE_URL}/workouts`);
-
-    const res = await fetch(`${BASE_URL}/workouts`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-    });
-
-    const data = await res.json();
-    console.log('📥 GET WORKOUTS: Resposta', data);
-
-    if (!res.ok) throw new Error(data.msg || 'Error al carregar workouts');
-    return data;
-}
-
-export async function createWorkout(workoutData, token) {
-    console.log('📤 CREATE WORKOUT: Enviant a', `${BASE_URL}/workouts`);
-
-    const res = await fetch(`${BASE_URL}/workouts`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(workoutData),
-    });
-
-    const data = await res.json();
-    console.log('📥 CREATE WORKOUT: Resposta', data);
-
-    if (!res.ok) throw new Error(data.msg || 'Error al crear workout');
-    return data;
-}
-
-export async function updateWorkout(workoutId, workoutData, token) {
-    const res = await fetch(`${BASE_URL}/workouts/${workoutId}`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(workoutData),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || 'Error al actualitzar workout');
-    return data;
-}
-
-export async function deleteWorkout(workoutId, token) {
-    const res = await fetch(`${BASE_URL}/workouts/${workoutId}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-    });
-    if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.msg || 'Error al eliminar workout');
+    if (token && !options.skipAuth) {
+        headers.Authorization = `Bearer ${token}`;
     }
-    return true;
-}
 
-// ====== FUNCIONS SESSIONS ======
-export async function startWorkoutSession(workoutId, token) {
-    const res = await fetch(`${BASE_URL}/sessions/start`, {
+    try {
+        console.log(`📤 ${options.method || 'GET'} ${url}`);
+
+        const response = await fetch(url, {
+            ...options,
+            headers,
+        });
+
+        const data = await response.json();
+        console.log(`📥 Response (${response.status}):`, data);
+
+        if (!response.ok) {
+            // Si és 401 (no autoritzat) i no estem en login/register
+            if (response.status === 401 && !endpoint.includes('/auth/')) {
+                // Netejar sessió i forçar logout
+                await AsyncStorage.removeItem('token');
+                await AsyncStorage.removeItem('user');
+                // Aquí podriesemitir un event per redirigir a login
+            }
+
+            throw new ApiError(
+                data.message || data.error || 'Error en la petició',
+                response.status,
+                data.errors
+            );
+        }
+
+        return data;
+
+    } catch (error) {
+        console.error('❌ Error en fetch:', error);
+
+        if (error instanceof ApiError) {
+            throw error;
+        }
+
+        // Error de xarxa
+        throw new ApiError(
+            'No es pot connectar amb el servidor',
+            0
+        );
+    }
+};
+
+// ============ AUTENTICACIÓ ============
+export const login = async (email, password) => {
+    const data = await fetchWithAuth('/auth/login', {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ workout_id: workoutId }),
+        body: JSON.stringify({ email, password }),
+        skipAuth: true
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || 'Error al iniciar sessió');
-    return data;
-}
 
-export async function completeWorkoutSession(sessionId, sessionData, token) {
-    const res = await fetch(`${BASE_URL}/sessions/${sessionId}/complete`, {
+    // Guardar token i usuari
+    if (data.accessToken) {
+        await AsyncStorage.setItem('token', data.accessToken);
+        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+    }
+
+    return data;
+};
+
+export const register = async (userData) => {
+    const data = await fetchWithAuth('/auth/register', {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(sessionData),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || 'Error al completar sessió');
-    return data;
-}
-
-export async function getWorkoutSessions(token, limit = 20) {
-    const res = await fetch(`${BASE_URL}/sessions?limit=${limit}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || 'Error al carregar sessions');
-    return data;
-}
-
-// ====== FUNCIONS USER ======
-export async function getUserStats(token) {
-    console.log('📤 GET USER STATS: Enviant a', `${BASE_URL}/users/stats`);
-
-    const res = await fetch(`${BASE_URL}/users/stats`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-    });
-
-    const data = await res.json();
-    console.log('📥 GET USER STATS: Resposta', data);
-
-    if (!res.ok) throw new Error(data.msg || 'Error al carregar estadístiques');
-    return data;
-}
-
-export async function updateUserProfile(userData, token) {
-    const res = await fetch(`${BASE_URL}/users/profile`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
         body: JSON.stringify(userData),
+        skipAuth: true
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || 'Error al actualitzar perfil');
+
+    // Guardar token i usuari
+    if (data.accessToken) {
+        await AsyncStorage.setItem('token', data.accessToken);
+        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+    }
+
     return data;
-}
+};
+
+export const logout = async () => {
+    try {
+        await fetchWithAuth('/auth/logout', {
+            method: 'POST'
+        });
+    } catch (error) {
+        console.log('Error en logout del servidor, però netejant local');
+    } finally {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('user');
+    }
+};
+
+export const getCurrentUser = async () => {
+    return fetchWithAuth('/auth/me');
+};
+
+// ============ WORKOUTS ============
+export const getWorkouts = async (filters = {}) => {
+    const queryString = new URLSearchParams(filters).toString();
+    const endpoint = `/workouts${queryString ? `?${queryString}` : ''}`;
+    return fetchWithAuth(endpoint);
+};
+
+export const getWorkoutById = async (workoutId) => {
+    return fetchWithAuth(`/workouts/${workoutId}`);
+};
+
+export const createWorkout = async (workoutData) => {
+    return fetchWithAuth('/workouts', {
+        method: 'POST',
+        body: JSON.stringify(workoutData)
+    });
+};
+
+export const updateWorkout = async (workoutId, workoutData) => {
+    return fetchWithAuth(`/workouts/${workoutId}`, {
+        method: 'PUT',
+        body: JSON.stringify(workoutData)
+    });
+};
+
+export const deleteWorkout = async (workoutId) => {
+    return fetchWithAuth(`/workouts/${workoutId}`, {
+        method: 'DELETE'
+    });
+};
+
+export const duplicateWorkout = async (workoutId) => {
+    return fetchWithAuth(`/workouts/${workoutId}/duplicate`, {
+        method: 'POST'
+    });
+};
+
+// ============ SESSIONS ============
+export const startWorkoutSession = async (workoutId) => {
+    return fetchWithAuth('/sessions/start', {
+        method: 'POST',
+        body: JSON.stringify({ workout_id: workoutId })
+    });
+};
+
+export const updateSession = async (sessionId, exercisesData) => {
+    return fetchWithAuth(`/sessions/${sessionId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ exercises_performed: exercisesData })
+    });
+};
+
+export const completeWorkoutSession = async (sessionId, sessionData) => {
+    return fetchWithAuth(`/sessions/${sessionId}/complete`, {
+        method: 'POST',
+        body: JSON.stringify(sessionData)
+    });
+};
+
+export const abandonSession = async (sessionId, reason) => {
+    return fetchWithAuth(`/sessions/${sessionId}/abandon`, {
+        method: 'POST',
+        body: JSON.stringify({ abandon_reason: reason })
+    });
+};
+
+export const getWorkoutSessions = async (filters = {}) => {
+    const queryString = new URLSearchParams(filters).toString();
+    const endpoint = `/sessions${queryString ? `?${queryString}` : ''}`;
+    return fetchWithAuth(endpoint);
+};
+
+export const getSessionById = async (sessionId) => {
+    return fetchWithAuth(`/sessions/${sessionId}`);
+};
+
+// ============ EXERCISES ============
+export const getExercises = async (filters = {}) => {
+    const queryString = new URLSearchParams(filters).toString();
+    const endpoint = `/exercises${queryString ? `?${queryString}` : ''}`;
+    return fetchWithAuth(endpoint);
+};
+
+export const createExercise = async (exerciseData) => {
+    return fetchWithAuth('/exercises', {
+        method: 'POST',
+        body: JSON.stringify(exerciseData)
+    });
+};
+
+// ============ USER ============
+export const getUserStats = async () => {
+    return fetchWithAuth('/users/stats');
+};
+
+export const updateUserProfile = async (userData) => {
+    return fetchWithAuth('/users/profile', {
+        method: 'PUT',
+        body: JSON.stringify(userData)
+    });
+};
+
+export const updatePreferences = async (preferences) => {
+    return fetchWithAuth('/users/preferences', {
+        method: 'PUT',
+        body: JSON.stringify(preferences)
+    });
+};
+
+export const getWeeklySchedule = async () => {
+    return fetchWithAuth('/users/weekly-schedule');
+};
+
+export const updateWeeklySchedule = async (scheduleData) => {
+    return fetchWithAuth('/users/weekly-schedule', {
+        method: 'PUT',
+        body: JSON.stringify(scheduleData)
+    });
+};
+
+export const getTodayWorkout = async () => {
+    return fetchWithAuth('/users/today-workout');
+};
+
+// ============ AI ============
+export const chatWithAI = async (message) => {
+    return fetchWithAuth('/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message })
+    });
+};
+
+export const generateAIWorkout = async (prompt, saveToLibrary = true) => {
+    return fetchWithAuth('/ai/generate-workout', {
+        method: 'POST',
+        body: JSON.stringify({ prompt, save_to_library: saveToLibrary })
+    });
+};
+
+export const analyzeProgress = async () => {
+    return fetchWithAuth('/ai/analyze-progress');
+};
+
+// ============ PROFILE ============
+export const changeUsername = async (username) => {
+    return fetchWithAuth('/users/username', {
+        method: 'PUT',
+        body: JSON.stringify({ username })
+    });
+};
+
+export const changePassword = async (currentPassword, newPassword) => {
+    return fetchWithAuth('/users/password', {
+        method: 'PUT',
+        body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword
+        })
+    });
+};
+
+export const addWeightEntry = async (weight) => {
+    return fetchWithAuth('/users/weight', {
+        method: 'POST',
+        body: JSON.stringify({ weight })
+    });
+};
+
+export const getWeightHistory = async (limit = 30) => {
+    return fetchWithAuth(`/users/weight-history?limit=${limit}`);
+};
