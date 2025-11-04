@@ -10,6 +10,7 @@ import {
   ImageBackground,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,9 +21,13 @@ import {
   startWorkoutSession,
   updateSession,
   completeWorkoutSession,
-  abandonSession
+  abandonSession,
+  createWorkout,
+  getExercises,
+  createExercise
 } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
+import ExerciseSelector from '../components/common/ExerciseSelector';
 
 export default function WorkoutScreen({ user }) {
   // Estados principals
@@ -39,6 +44,20 @@ export default function WorkoutScreen({ user }) {
   const [currentSet, setCurrentSet] = useState(1);
   const [restTimer, setRestTimer] = useState(0);
   const [completedSets, setCompletedSets] = useState([]);
+
+  // Modal de creació de workout
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [newWorkout, setNewWorkout] = useState({
+    name: '',
+    description: '',
+    workout_type: 'custom',
+    difficulty: 'intermediate',
+  });
+  const [newExercises, setNewExercises] = useState([
+    { name: '', sets: '3', reps: '10', exercise_id: null, newExercise: null }
+  ]);
+  const [creating, setCreating] = useState(false);
+  const [availableExercises, setAvailableExercises] = useState([]);
 
   useEffect(() => {
     loadWorkoutData();
@@ -91,13 +110,171 @@ export default function WorkoutScreen({ user }) {
     await loadWorkoutData();
   };
 
+  // Carregar exercicis disponibles quan s'obre el modal
+  const loadAvailableExercises = async () => {
+    try {
+      const exercises = await getExercises();
+      console.log('✅ Exercicis carregats:', exercises.length);
+      setAvailableExercises(exercises);
+    } catch (error) {
+      console.error('❌ Error carregant exercicis:', error);
+      // No mostrem error, simplement no hi haurà exercicis predefinits
+    }
+  };
+
+  const handleOpenCreateModal = () => {
+    setCreateModalVisible(true);
+    loadAvailableExercises();
+  };
+
+  // ============ FUNCIONS DE CREACIÓ DE WORKOUT ============
+
+  const handleCreateWorkout = async () => {
+    // Validacions
+    if (!newWorkout.name.trim()) {
+      Alert.alert('Error', 'El workout necessita un nom');
+      return;
+    }
+
+    const validExercises = newExercises.filter(ex =>
+      (ex.exercise_id || ex.newExercise) && ex.sets && ex.reps
+    );
+
+    if (validExercises.length === 0) {
+      Alert.alert('Error', 'Has d\'afegir almenys un exercici vàlid');
+      return;
+    }
+
+    setCreating(true);
+
+    try {
+      // 1. Processar exercicis (crear nous si cal)
+      const exerciseIds = [];
+
+      for (let i = 0; i < validExercises.length; i++) {
+        const ex = validExercises[i];
+
+        let exerciseId;
+
+        if (ex.exercise_id) {
+          // Exercici existent
+          exerciseId = ex.exercise_id;
+        } else if (ex.newExercise) {
+          // Crear nou exercici
+          console.log('📝 Creant nou exercici:', ex.newExercise);
+
+          const newEx = await createExercise({
+            name: ex.newExercise.name.trim(),
+            type: ex.newExercise.type,
+            category: ex.newExercise.category, // Ara amb categoria vàlida
+            default_sets: parseInt(ex.sets) || 3,
+            default_reps: parseInt(ex.reps) || 10,
+            default_rest_seconds: 60
+          });
+
+          exerciseId = newEx.id;
+          console.log('✅ Exercici creat:', newEx.id);
+        } else {
+          // Buscar per nom (fallback)
+          const found = availableExercises.find(e =>
+            e.name.toLowerCase() === ex.name.trim().toLowerCase()
+          );
+
+          if (found) {
+            exerciseId = found.id;
+          } else {
+            // Crear amb categoria per defecte
+            const newEx = await createExercise({
+              name: ex.name.trim(),
+              type: 'reps',
+              category: 'full_body', // Categoria per defecte vàlida
+              default_sets: parseInt(ex.sets) || 3,
+              default_reps: parseInt(ex.reps) || 10,
+              default_rest_seconds: 60
+            });
+            exerciseId = newEx.id;
+          }
+        }
+
+        exerciseIds.push({
+          exercise_id: exerciseId,
+          order: i + 1,
+          custom_sets: parseInt(ex.sets),
+          custom_reps: parseInt(ex.reps),
+        });
+      }
+
+      // 2. Crear workout
+      const workoutData = {
+        name: newWorkout.name.trim(),
+        description: newWorkout.description.trim() || undefined,
+        workout_type: newWorkout.workout_type,
+        difficulty: newWorkout.difficulty,
+        exercises: exerciseIds,
+        is_template: true
+      };
+
+      console.log('📝 Creant workout:', workoutData);
+      const createdWorkout = await createWorkout(workoutData);
+
+      Alert.alert(
+        '✅ Workout Creat!',
+        `El workout "${createdWorkout.name}" s'ha creat correctament`,
+        [
+          {
+            text: 'Genial!',
+            onPress: () => {
+              setCreateModalVisible(false);
+              resetCreateForm();
+              loadWorkoutData(); // Recarregar llista
+            }
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('❌ Error creant workout:', error);
+      const errorInfo = handleApiError(error);
+      Alert.alert(errorInfo.title, errorInfo.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const resetCreateForm = () => {
+    setNewWorkout({
+      name: '',
+      description: '',
+      workout_type: 'custom',
+      difficulty: 'intermediate',
+    });
+    setNewExercises([{ name: '', sets: '3', reps: '10', exercise_id: null, newExercise: null }]);
+  };
+
+  const handleExerciseChange = (index, field, value) => {
+    const updated = [...newExercises];
+    updated[index][field] = value;
+    setNewExercises(updated);
+  };
+
+  const addExercise = () => {
+    setNewExercises([...newExercises, { name: '', sets: '3', reps: '10', exercise_id: null, newExercise: null }]);
+  };
+
+  const removeExercise = (index) => {
+    if (newExercises.length > 1) {
+      const updated = newExercises.filter((_, i) => i !== index);
+      setNewExercises(updated);
+    }
+  };
+
+  // ============ FUNCIONS D'ENTRENAMENT (ja existents) ============
+
   const startWorkout = async (workout) => {
     try {
       console.log('🏋️ Iniciant workout:', workout.name);
 
-      // Crear sessió al backend
       const session = await startWorkoutSession(workout.id);
-
       console.log('✅ Sessió creada:', session);
 
       setCurrentSessionId(session.id);
@@ -124,7 +301,6 @@ export default function WorkoutScreen({ user }) {
     const exercise = selectedWorkout.exercises[currentExercise];
     const totalSets = exercise.custom_sets || exercise.exercise_id.default_sets || 3;
 
-    // Guardar set completat
     const newCompletedSet = {
       exercise_index: currentExercise,
       set_number: currentSet,
@@ -134,16 +310,13 @@ export default function WorkoutScreen({ user }) {
     setCompletedSets([...completedSets, newCompletedSet]);
 
     if (currentSet < totalSets) {
-      // Següent sèrie del mateix exercici
       setCurrentSet(currentSet + 1);
       setRestTimer(exercise.custom_rest_seconds || exercise.exercise_id.default_rest_seconds || 60);
     } else if (currentExercise < selectedWorkout.exercises.length - 1) {
-      // Següent exercici
       setCurrentExercise(currentExercise + 1);
       setCurrentSet(1);
       Alert.alert("✅ Exercici completat", "¡Següent exercici!");
     } else {
-      // Workout completat
       handleCompleteWorkout();
     }
   };
@@ -162,9 +335,8 @@ export default function WorkoutScreen({ user }) {
             text: "Completar",
             onPress: async () => {
               try {
-                // Completar sessió al backend
                 const sessionData = {
-                  perceived_difficulty: 7, // Podries demanar això amb un slider
+                  perceived_difficulty: 7,
                   energy_level: 8,
                   mood_after: 'great',
                   notes: 'Entrenament completat des de l\'app'
@@ -180,7 +352,7 @@ export default function WorkoutScreen({ user }) {
                       text: "🚀 GENIAL!",
                       onPress: () => {
                         setModalVisible(false);
-                        loadWorkoutData(); // Recarregar per actualitzar stats
+                        loadWorkoutData();
                       }
                     }
                   ]
@@ -217,7 +389,6 @@ export default function WorkoutScreen({ user }) {
               Alert.alert("Info", "Sessió abandonada. Torna-ho a intentar aviat!");
             } catch (error) {
               console.error('❌ Error abandonant sessió:', error);
-              // Tanquem igualment
               setModalVisible(false);
             }
           }
@@ -226,14 +397,13 @@ export default function WorkoutScreen({ user }) {
     );
   };
 
-  // Generar calendari setmanal
   const getDaySchedule = () => {
     if (!weekSchedule) return [];
 
     const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const dayNames = ['DL', 'DM', 'DC', 'DJ', 'DV', 'DS', 'DG'];
-    const today = new Date().getDay(); // 0 = diumenge
-    const todayIndex = today === 0 ? 6 : today - 1; // Convertir a índex 0-6 (dilluns=0)
+    const today = new Date().getDay();
+    const todayIndex = today === 0 ? 6 : today - 1;
 
     return daysOfWeek.map((day, index) => ({
       day: dayNames[index],
@@ -345,7 +515,6 @@ export default function WorkoutScreen({ user }) {
                     <Text style={styles.cardDescription}>{workout.description}</Text>
                   )}
 
-                  {/* Exercicis */}
                   {workout.exercises && workout.exercises.length > 0 && (
                     <View style={styles.exerciseList}>
                       <Text style={styles.exerciseListTitle}>Exercicis:</Text>
@@ -380,7 +549,141 @@ export default function WorkoutScreen({ user }) {
             )}
           </ScrollView>
 
-          {/* MODAL D'ENTRENAMENT */}
+          {/* BOTÓ FLOTANT PER CREAR WORKOUT */}
+          <TouchableOpacity
+            style={styles.fabButton}
+            onPress={handleOpenCreateModal}
+          >
+            <Ionicons name="add" size={32} color="white" />
+          </TouchableOpacity>
+
+          {/* MODAL DE CREACIÓ DE WORKOUT */}
+          <Modal
+            visible={createModalVisible}
+            animationType="slide"
+            transparent={false}
+            onRequestClose={() => setCreateModalVisible(false)}
+          >
+            <LinearGradient colors={['#4CAF50', '#2D5016']} style={{ flex: 1 }}>
+              <SafeAreaView style={{ flex: 1 }}>
+                <View style={styles.createModalHeader}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setCreateModalVisible(false);
+                      resetCreateForm();
+                    }}
+                    style={styles.closeButton}
+                  >
+                    <Ionicons name="close" size={24} color="white" />
+                  </TouchableOpacity>
+                  <Text style={styles.createModalTitle}>✨ Crear Workout</Text>
+                </View>
+
+                <ScrollView style={styles.createModalContent}>
+                  {/* Nom del workout */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Nom del Workout *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Ex: Push Day, Dia de Pit"
+                      placeholderTextColor="rgba(255,255,255,0.5)"
+                      value={newWorkout.name}
+                      onChangeText={(text) => setNewWorkout({ ...newWorkout, name: text })}
+                    />
+                  </View>
+
+                  {/* Descripció */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Descripció (opcional)</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder="Ex: Pectoral, espatlles i tríceps"
+                      placeholderTextColor="rgba(255,255,255,0.5)"
+                      value={newWorkout.description}
+                      onChangeText={(text) => setNewWorkout({ ...newWorkout, description: text })}
+                      multiline
+                      numberOfLines={3}
+                    />
+                  </View>
+
+                  {/* Dificultat */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Dificultat</Text>
+                    <View style={styles.pickerContainer}>
+                      {['beginner', 'intermediate', 'advanced'].map((level) => (
+                        <TouchableOpacity
+                          key={level}
+                          style={[
+                            styles.pickerOption,
+                            newWorkout.difficulty === level && styles.pickerOptionSelected
+                          ]}
+                          onPress={() => setNewWorkout({ ...newWorkout, difficulty: level })}
+                        >
+                          <Text
+                            style={[
+                              styles.pickerOptionText,
+                              newWorkout.difficulty === level && styles.pickerOptionTextSelected
+                            ]}
+                          >
+                            {level === 'beginner' ? 'Principiant' : level === 'intermediate' ? 'Intermedi' : 'Avançat'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Exercicis */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Exercicis *</Text>
+                    {newExercises.map((exercise, index) => (
+                      <View key={index} style={styles.exerciseInputRow}>
+                        <ExerciseSelector
+                          exercise={exercise}
+                          onChange={handleExerciseChange}
+                          idx={index}
+                          availableExercises={availableExercises}
+                        />
+                        {newExercises.length > 1 && (
+                          <TouchableOpacity
+                            onPress={() => removeExercise(index)}
+                            style={styles.removeButton}
+                          >
+                            <Ionicons name="trash" size={20} color="#ff5252" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))}
+
+                    <TouchableOpacity
+                      style={styles.addExerciseButton}
+                      onPress={addExercise}
+                    >
+                      <Ionicons name="add-circle-outline" size={20} color="white" />
+                      <Text style={styles.addExerciseText}>Afegir Exercici</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Botó de creació */}
+                  <TouchableOpacity
+                    style={styles.createButton}
+                    onPress={handleCreateWorkout}
+                    disabled={creating}
+                  >
+                    {creating ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={20} color="white" />
+                        <Text style={styles.createButtonText}>CREAR WORKOUT</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </ScrollView>
+              </SafeAreaView>
+            </LinearGradient>
+          </Modal>
+
+          {/* MODAL D'ENTRENAMENT (ja existent) */}
           <Modal visible={modalVisible} animationType="slide" transparent={false}>
             <LinearGradient colors={['#2D5016', '#4CAF50']} style={{ flex: 1 }}>
               <SafeAreaView style={styles.modalContainer}>
@@ -466,7 +769,7 @@ export default function WorkoutScreen({ user }) {
 
 const styles = StyleSheet.create({
   bg: { flex: 1 },
-  container: { padding: 20 },
+  container: { padding: 20, paddingBottom: 100 },
   header: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -643,7 +946,130 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // Modal styles
+  // FAB Button
+  fabButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    backgroundColor: '#4CAF50',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+
+  // Create Modal styles
+  createModalHeader: {
+    padding: 20,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.2)',
+  },
+  createModalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginTop: 10,
+  },
+  createModalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 25,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    color: 'white',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  pickerOption: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  pickerOptionSelected: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'white',
+  },
+  pickerOptionText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pickerOptionTextSelected: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  exerciseInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  removeButton: {
+    marginLeft: 10,
+    padding: 8,
+  },
+  addExerciseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  addExerciseText: {
+    color: 'white',
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  createButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 18,
+    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  createButtonText: {
+    color: '#2D5016',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+
+  // Modal styles (workout session)
   modalContainer: {
     flex: 1,
   },
