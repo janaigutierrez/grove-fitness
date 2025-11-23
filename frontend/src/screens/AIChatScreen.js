@@ -9,17 +9,20 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { chatWithAI, getCurrentUser } from '../services/api';
+import { chatWithAI, getCurrentUser, changeAIPersonality } from '../services/api';
 
 export default function AIChatScreen() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
+  const [personalityModalVisible, setPersonalityModalVisible] = useState(false);
+  const [changingPersonality, setChangingPersonality] = useState(false);
   const scrollViewRef = useRef();
 
   useEffect(() => {
@@ -79,6 +82,30 @@ export default function AIChatScreen() {
       Alert.alert('Error', error.message || 'No se pudo enviar el mensaje');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePersonality = async (personalityType) => {
+    try {
+      setChangingPersonality(true);
+      await changeAIPersonality(personalityType);
+
+      // Actualizar el usuario local
+      setUser({ ...user, ai_personality_type: personalityType });
+      setPersonalityModalVisible(false);
+
+      Alert.alert(
+        'Personalidad actualizada',
+        `Tu entrenador IA ahora tiene personalidad ${personalityType}`
+      );
+
+      // Recargar usuario para asegurar que esté sincronizado
+      await loadUser();
+    } catch (error) {
+      console.error('Error changing personality:', error);
+      Alert.alert('Error', error.message || 'No se pudo cambiar la personalidad');
+    } finally {
+      setChangingPersonality(false);
     }
   };
 
@@ -187,6 +214,12 @@ export default function AIChatScreen() {
               </Text>
             </View>
           </View>
+          <TouchableOpacity
+            onPress={() => setPersonalityModalVisible(true)}
+            style={styles.settingsButton}
+          >
+            <Icon name="settings-outline" size={24} color="#666" />
+          </TouchableOpacity>
         </View>
 
         {/* Messages */}
@@ -229,6 +262,130 @@ export default function AIChatScreen() {
             <Icon name="send" size={20} color="white" />
           </TouchableOpacity>
         </View>
+
+        {/* Personality Selector Modal */}
+        <Modal
+          visible={personalityModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setPersonalityModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Personalidad del Entrenador</Text>
+                <TouchableOpacity onPress={() => setPersonalityModalVisible(false)}>
+                  <Icon name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.personalitiesContainer}>
+                <Text style={styles.modalDescription}>
+                  Elige cómo quieres que sea tu entrenador IA
+                </Text>
+
+                {/* Motivador */}
+                <TouchableOpacity
+                  style={[
+                    styles.personalityCard,
+                    user?.ai_personality_type === 'motivador' && styles.personalityCardActive
+                  ]}
+                  onPress={() => handleChangePersonality('motivador')}
+                  disabled={changingPersonality}
+                >
+                  <View style={[styles.personalityIcon, { backgroundColor: '#ff6b6b' }]}>
+                    <Icon name="flame" size={28} color="white" />
+                  </View>
+                  <View style={styles.personalityInfo}>
+                    <Text style={styles.personalityName}>Motivador</Text>
+                    <Text style={styles.personalityDesc}>
+                      Energético y lleno de ánimo. Te impulsa a superarte cada día.
+                    </Text>
+                  </View>
+                  {user?.ai_personality_type === 'motivador' && (
+                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
+                  )}
+                </TouchableOpacity>
+
+                {/* Analítico */}
+                <TouchableOpacity
+                  style={[
+                    styles.personalityCard,
+                    user?.ai_personality_type === 'analítico' && styles.personalityCardActive
+                  ]}
+                  onPress={() => handleChangePersonality('analítico')}
+                  disabled={changingPersonality}
+                >
+                  <View style={[styles.personalityIcon, { backgroundColor: '#4A90E2' }]}>
+                    <Icon name="analytics" size={28} color="white" />
+                  </View>
+                  <View style={styles.personalityInfo}>
+                    <Text style={styles.personalityName}>Analítico</Text>
+                    <Text style={styles.personalityDesc}>
+                      Basado en datos y ciencia. Te da información precisa y detallada.
+                    </Text>
+                  </View>
+                  {user?.ai_personality_type === 'analítico' && (
+                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
+                  )}
+                </TouchableOpacity>
+
+                {/* Bestia */}
+                <TouchableOpacity
+                  style={[
+                    styles.personalityCard,
+                    user?.ai_personality_type === 'bestia' && styles.personalityCardActive
+                  ]}
+                  onPress={() => handleChangePersonality('bestia')}
+                  disabled={changingPersonality}
+                >
+                  <View style={[styles.personalityIcon, { backgroundColor: '#2D5016' }]}>
+                    <Icon name="fitness" size={28} color="white" />
+                  </View>
+                  <View style={styles.personalityInfo}>
+                    <Text style={styles.personalityName}>Bestia</Text>
+                    <Text style={styles.personalityDesc}>
+                      Intenso y sin excusas. Te reta a dar el máximo rendimiento.
+                    </Text>
+                  </View>
+                  {user?.ai_personality_type === 'bestia' && (
+                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
+                  )}
+                </TouchableOpacity>
+
+                {/* Relajado */}
+                <TouchableOpacity
+                  style={[
+                    styles.personalityCard,
+                    user?.ai_personality_type === 'relajado' && styles.personalityCardActive
+                  ]}
+                  onPress={() => handleChangePersonality('relajado')}
+                  disabled={changingPersonality}
+                >
+                  <View style={[styles.personalityIcon, { backgroundColor: '#4CAF50' }]}>
+                    <Icon name="leaf" size={28} color="white" />
+                  </View>
+                  <View style={styles.personalityInfo}>
+                    <Text style={styles.personalityName}>Relajado</Text>
+                    <Text style={styles.personalityDesc}>
+                      Amigable y comprensivo. Te apoya con paciencia y calma.
+                    </Text>
+                  </View>
+                  {user?.ai_personality_type === 'relajado' && (
+                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+
+              {changingPersonality && (
+                <View style={styles.loadingOverlay}>
+                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <Text style={styles.loadingText}>Actualizando personalidad...</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -376,5 +533,93 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  settingsButton: {
+    padding: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2D5016',
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+  },
+  personalitiesContainer: {
+    padding: 20,
+  },
+  personalityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  personalityCardActive: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#e8f5e9',
+  },
+  personalityIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  personalityInfo: {
+    flex: 1,
+  },
+  personalityName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2D5016',
+    marginBottom: 4,
+  },
+  personalityDesc: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
   },
 });
