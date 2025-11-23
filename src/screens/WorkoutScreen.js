@@ -29,6 +29,7 @@ import {
 import { handleApiError } from '../utils/errorHandler';
 import ExerciseSelector from '../components/common/ExerciseSelector';
 import AIWorkoutGeneratorModal from '../components/AIWorkoutGeneratorModal';
+import WorkoutCompletionModal from '../components/WorkoutCompletionModal';
 
 export default function WorkoutScreen({ user }) {
   // Estados principals
@@ -49,6 +50,8 @@ export default function WorkoutScreen({ user }) {
   // Modal de creació de workout
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [aiGeneratorVisible, setAiGeneratorVisible] = useState(false);
+  const [completionModalVisible, setCompletionModalVisible] = useState(false);
+  const [completingSession, setCompletingSession] = useState(false);
   const [newWorkout, setNewWorkout] = useState({
     name: '',
     description: '',
@@ -323,55 +326,37 @@ export default function WorkoutScreen({ user }) {
     }
   };
 
-  const handleCompleteWorkout = async () => {
+  const handleCompleteWorkout = () => {
+    setCompletionModalVisible(true);
+  };
+
+  const handleCompletionSubmit = async (sessionData) => {
     try {
+      setCompletingSession(true);
+      await completeWorkoutSession(currentSessionId, sessionData);
+
+      setCompletionModalVisible(false);
+
       Alert.alert(
-        "💪 Completar Entrenament",
-        "Com t'has sentit?",
+        "🎉 ENTRENAMIENTO COMPLETADO!",
+        `¡BRUTAL! Has acabado ${selectedWorkout.name}\n\n🔥 +1 hacia tus objetivos\n💪 Progresión registrada\n\n¡Un paso más cerca!`,
         [
           {
-            text: "Cancel·lar",
-            style: "cancel"
-          },
-          {
-            text: "Completar",
-            onPress: async () => {
-              try {
-                const sessionData = {
-                  perceived_difficulty: 7,
-                  energy_level: 8,
-                  mood_after: 'great',
-                  notes: 'Entrenament completat des de l\'app'
-                };
-
-                await completeWorkoutSession(currentSessionId, sessionData);
-
-                Alert.alert(
-                  "🎉 ENTRENAMENT COMPLETAT!",
-                  `¡BRUTAL! Has acabat ${selectedWorkout.name}\n\n🔥 +1 cap als teus objectius\n💪 Progressió registrada\n\n¡Un pas més a prop!`,
-                  [
-                    {
-                      text: "🚀 GENIAL!",
-                      onPress: () => {
-                        setModalVisible(false);
-                        loadWorkoutData();
-                      }
-                    }
-                  ]
-                );
-
-              } catch (error) {
-                console.error('❌ Error completant sessió:', error);
-                const errorInfo = handleApiError(error);
-                Alert.alert(errorInfo.title, errorInfo.message);
-              }
+            text: "🚀 GENIAL!",
+            onPress: () => {
+              setModalVisible(false);
+              loadWorkoutData();
             }
           }
         ]
       );
 
     } catch (error) {
-      console.error('❌ Error:', error);
+      console.error('❌ Error completando sesión:', error);
+      const errorInfo = handleApiError(error);
+      Alert.alert(errorInfo.title, errorInfo.message);
+    } finally {
+      setCompletingSession(false);
     }
   };
 
@@ -779,6 +764,14 @@ export default function WorkoutScreen({ user }) {
             onWorkoutGenerated={(workout) => {
               loadWorkoutData(); // Recargar workouts
             }}
+          />
+
+          {/* MODAL DE COMPLETAR WORKOUT */}
+          <WorkoutCompletionModal
+            visible={completionModalVisible}
+            onComplete={handleCompletionSubmit}
+            onCancel={() => setCompletionModalVisible(false)}
+            loading={completingSession}
           />
         </SafeAreaView>
       </ImageBackground>
