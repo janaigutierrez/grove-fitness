@@ -18,7 +18,8 @@ import {
   getWeightHistory,
   addWeightEntry,
   getUserStats,
-  getWorkoutSessions
+  getWorkoutSessions,
+  analyzeProgress
 } from '../services/api';
 
 const screenWidth = Dimensions.get('window').width;
@@ -33,6 +34,9 @@ export default function ProgressScreen() {
   // Modal states
   const [addWeightModal, setAddWeightModal] = useState(false);
   const [newWeight, setNewWeight] = useState('');
+  const [aiAnalysisModal, setAiAnalysisModal] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [analyzingProgress, setAnalyzingProgress] = useState(false);
 
   useEffect(() => {
     loadProgressData();
@@ -84,6 +88,20 @@ export default function ProgressScreen() {
       Alert.alert('Error', error.message || 'No se pudo registrar el peso');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAnalyzeProgress = async () => {
+    try {
+      setAnalyzingProgress(true);
+      const analysis = await analyzeProgress();
+      setAiAnalysis(analysis);
+      setAiAnalysisModal(true);
+    } catch (error) {
+      console.error('Error analyzing progress:', error);
+      Alert.alert('Error', error.message || 'No se pudo analizar el progreso');
+    } finally {
+      setAnalyzingProgress(false);
     }
   };
 
@@ -191,6 +209,28 @@ export default function ProgressScreen() {
             <Text style={styles.statLabel}>Cambio de peso</Text>
           </View>
         </View>
+
+        {/* AI Analysis Card */}
+        <TouchableOpacity
+          style={styles.aiAnalysisCard}
+          onPress={handleAnalyzeProgress}
+          disabled={analyzingProgress}
+        >
+          <View style={styles.aiAnalysisLeft}>
+            <Icon name="sparkles" size={32} color="#FF9800" />
+            <View style={styles.aiAnalysisTextContainer}>
+              <Text style={styles.aiAnalysisTitle}>Análisis con IA</Text>
+              <Text style={styles.aiAnalysisDesc}>
+                Obtén insights personalizados sobre tu progreso
+              </Text>
+            </View>
+          </View>
+          {analyzingProgress ? (
+            <ActivityIndicator color="#FF9800" />
+          ) : (
+            <Icon name="arrow-forward-circle" size={28} color="#FF9800" />
+          )}
+        </TouchableOpacity>
 
         {/* Weight Chart */}
         {weightHistory.length > 0 ? (
@@ -352,6 +392,70 @@ export default function ProgressScreen() {
               ) : (
                 <Text style={styles.modalSaveBtnText}>Guardar</Text>
               )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* AI Analysis Modal */}
+      <Modal
+        visible={aiAnalysisModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setAiAnalysisModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.aiModalHeader}>
+                <Icon name="sparkles" size={24} color="#FF9800" />
+                <Text style={styles.modalTitle}>Análisis de Progreso</Text>
+              </View>
+              <TouchableOpacity onPress={() => setAiAnalysisModal(false)}>
+                <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.aiAnalysisContent} showsVerticalScrollIndicator={false}>
+              {aiAnalysis ? (
+                <>
+                  <View style={styles.aiSection}>
+                    <Text style={styles.aiSectionTitle}>📊 Resumen</Text>
+                    <Text style={styles.aiText}>{aiAnalysis.analysis || 'Análisis no disponible'}</Text>
+                  </View>
+
+                  {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
+                    <View style={styles.aiSection}>
+                      <Text style={styles.aiSectionTitle}>💡 Recomendaciones</Text>
+                      {aiAnalysis.recommendations.map((rec, index) => (
+                        <View key={index} style={styles.recommendationItem}>
+                          <Icon name="checkmark-circle" size={16} color="#4CAF50" />
+                          <Text style={styles.recommendationText}>{rec}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {aiAnalysis.insights && (
+                    <View style={styles.aiSection}>
+                      <Text style={styles.aiSectionTitle}>✨ Insights</Text>
+                      <Text style={styles.aiText}>{aiAnalysis.insights}</Text>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <View style={styles.aiEmptyState}>
+                  <Icon name="analytics-outline" size={64} color="#ccc" />
+                  <Text style={styles.aiEmptyText}>No hay análisis disponible</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.modalSaveBtn}
+              onPress={() => setAiAnalysisModal(false)}
+            >
+              <Text style={styles.modalSaveBtnText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -626,5 +730,84 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  aiAnalysisCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+  },
+  aiAnalysisLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 15,
+  },
+  aiAnalysisTextContainer: {
+    flex: 1,
+  },
+  aiAnalysisTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2D5016',
+    marginBottom: 4,
+  },
+  aiAnalysisDesc: {
+    fontSize: 13,
+    color: '#666',
+  },
+  aiModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  aiAnalysisContent: {
+    padding: 20,
+  },
+  aiSection: {
+    marginBottom: 20,
+  },
+  aiSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2D5016',
+    marginBottom: 10,
+  },
+  aiText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 22,
+  },
+  recommendationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+    gap: 8,
+  },
+  recommendationText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+  },
+  aiEmptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  aiEmptyText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 15,
   },
 });
