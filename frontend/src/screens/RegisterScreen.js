@@ -69,15 +69,19 @@ export default function RegisterScreen({ navigation, onLogin }) {
                 password: formData.password,
             });
 
-            // Auto-login: Passar directament al Dashboard
+            // Navegar a Onboarding
             if (response.accessToken && response.user) {
                 Alert.alert(
-                    '🎉 Benvingut a Grove!',
-                    `Hola ${formData.name}! El teu compte s'ha creat correctament.\n\n¡Preparat per començar la teva transformació! 💪`,
+                    '🎉 Bienvenido a Grove!',
+                    `Hola ${formData.name}! Tu cuenta se ha creado correctamente.\n\n¡Vamos a configurar tu perfil! 💪`,
                     [
                         {
-                            text: 'Començar',
-                            onPress: () => onLogin(response.accessToken, response.user)
+                            text: 'Continuar',
+                            onPress: () => navigation.navigate('Onboarding', {
+                                token: response.accessToken,
+                                user: response.user,
+                                onComplete: onLogin
+                            })
                         }
                     ]
                 );

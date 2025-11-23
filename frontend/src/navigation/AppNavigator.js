@@ -8,15 +8,30 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LandingScreen from '../screens/LandingScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 
 // Screens principals
 import DashboardScreen from '../screens/DashboardScreen';
 import WorkoutScreen from '../screens/WorkoutScreen';
+import AIChatScreen from '../screens/AIChatScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import WeeklyScheduleScreen from '../screens/WeeklyScheduleScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Profile Stack Navigator
+function ProfileStack({ user, onLogout }) {
+    return (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="ProfileMain">
+                {(props) => <ProfileScreen {...props} user={user} onLogout={onLogout} />}
+            </Stack.Screen>
+            <Stack.Screen name="WeeklySchedule" component={WeeklyScheduleScreen} />
+        </Stack.Navigator>
+    );
+}
 
 // Navegador de tabs (app principal)
 function MainTabs({ user, token, onLogout }) {
@@ -28,6 +43,7 @@ function MainTabs({ user, token, onLogout }) {
                     let iconName;
                     if (route.name === 'Dashboard') iconName = 'home-outline';
                     else if (route.name === 'Workout') iconName = 'barbell-outline';
+                    else if (route.name === 'AI Chat') iconName = 'chatbubbles-outline';
                     else if (route.name === 'Progress') iconName = 'stats-chart-outline';
                     else if (route.name === 'Profile') iconName = 'person-outline';
                     return <Icon name={iconName} size={size} color={color} />;
@@ -43,11 +59,14 @@ function MainTabs({ user, token, onLogout }) {
             <Tab.Screen name="Workout">
                 {(props) => <WorkoutScreen {...props} user={user} token={token} />}
             </Tab.Screen>
+            <Tab.Screen name="AI Chat">
+                {(props) => <AIChatScreen {...props} user={user} token={token} />}
+            </Tab.Screen>
             <Tab.Screen name="Progress">
                 {(props) => <ProgressScreen {...props} user={user} token={token} />}
             </Tab.Screen>
             <Tab.Screen name="Profile">
-                {(props) => <ProfileScreen {...props} user={user} onLogout={onLogout} />}
+                {(props) => <ProfileStack {...props} user={user} onLogout={onLogout} />}
             </Tab.Screen>
         </Tab.Navigator>
     );
@@ -83,6 +102,9 @@ export default function AppNavigator() {
                     </Stack.Screen>
                     <Stack.Screen name="Register">
                         {(props) => <RegisterScreen {...props} onLogin={handleLogin} />}
+                    </Stack.Screen>
+                    <Stack.Screen name="Onboarding">
+                        {(props) => <OnboardingScreen {...props} onComplete={handleLogin} />}
                     </Stack.Screen>
                 </Stack.Navigator>
             ) : (
