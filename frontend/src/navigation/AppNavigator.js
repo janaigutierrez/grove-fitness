@@ -8,6 +8,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LandingScreen from '../screens/LandingScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 
 // Screens principals
 import DashboardScreen from '../screens/DashboardScreen';
@@ -88,6 +89,9 @@ export default function AppNavigator() {
                     </Stack.Screen>
                     <Stack.Screen name="Register">
                         {(props) => <RegisterScreen {...props} onLogin={handleLogin} />}
+                    </Stack.Screen>
+                    <Stack.Screen name="Onboarding">
+                        {(props) => <OnboardingScreen {...props} onComplete={handleLogin} />}
                     </Stack.Screen>
                 </Stack.Navigator>
             ) : (
