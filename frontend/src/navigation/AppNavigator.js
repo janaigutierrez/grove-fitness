@@ -12,6 +12,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 // Screens principals
 import DashboardScreen from '../screens/DashboardScreen';
 import WorkoutScreen from '../screens/WorkoutScreen';
+import AIChatScreen from '../screens/AIChatScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -28,6 +29,7 @@ function MainTabs({ user, token, onLogout }) {
                     let iconName;
                     if (route.name === 'Dashboard') iconName = 'home-outline';
                     else if (route.name === 'Workout') iconName = 'barbell-outline';
+                    else if (route.name === 'AI Chat') iconName = 'chatbubbles-outline';
                     else if (route.name === 'Progress') iconName = 'stats-chart-outline';
                     else if (route.name === 'Profile') iconName = 'person-outline';
                     return <Icon name={iconName} size={size} color={color} />;
@@ -42,6 +44,9 @@ function MainTabs({ user, token, onLogout }) {
             </Tab.Screen>
             <Tab.Screen name="Workout">
                 {(props) => <WorkoutScreen {...props} user={user} token={token} />}
+            </Tab.Screen>
+            <Tab.Screen name="AI Chat">
+                {(props) => <AIChatScreen {...props} user={user} token={token} />}
             </Tab.Screen>
             <Tab.Screen name="Progress">
                 {(props) => <ProgressScreen {...props} user={user} token={token} />}
