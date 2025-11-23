@@ -28,6 +28,7 @@ import {
 } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import ExerciseSelector from '../components/common/ExerciseSelector';
+import AIWorkoutGeneratorModal from '../components/AIWorkoutGeneratorModal';
 
 export default function WorkoutScreen({ user }) {
   // Estados principals
@@ -47,6 +48,7 @@ export default function WorkoutScreen({ user }) {
 
   // Modal de creació de workout
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [aiGeneratorVisible, setAiGeneratorVisible] = useState(false);
   const [newWorkout, setNewWorkout] = useState({
     name: '',
     description: '',
@@ -549,6 +551,14 @@ export default function WorkoutScreen({ user }) {
             )}
           </ScrollView>
 
+          {/* BOTÓ FLOTANT PER GENERAR AMB IA */}
+          <TouchableOpacity
+            style={[styles.fabButton, styles.fabButtonSecondary]}
+            onPress={() => setAiGeneratorVisible(true)}
+          >
+            <Ionicons name="sparkles" size={28} color="white" />
+          </TouchableOpacity>
+
           {/* BOTÓ FLOTANT PER CREAR WORKOUT */}
           <TouchableOpacity
             style={styles.fabButton}
@@ -761,6 +771,15 @@ export default function WorkoutScreen({ user }) {
               </SafeAreaView>
             </LinearGradient>
           </Modal>
+
+          {/* MODAL DE GENERADOR DE AI */}
+          <AIWorkoutGeneratorModal
+            visible={aiGeneratorVisible}
+            onClose={() => setAiGeneratorVisible(false)}
+            onWorkoutGenerated={(workout) => {
+              loadWorkoutData(); // Recargar workouts
+            }}
+          />
         </SafeAreaView>
       </ImageBackground>
     </LinearGradient>
@@ -962,6 +981,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  fabButtonSecondary: {
+    bottom: 100,
+    backgroundColor: '#FF9800',
   },
 
   // Create Modal styles
