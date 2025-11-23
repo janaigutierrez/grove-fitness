@@ -278,6 +278,13 @@ export const analyzeProgress = async () => {
     return fetchWithAuth('/ai/analyze-progress');
 };
 
+export const changeAIPersonality = async (personalityType) => {
+    return fetchWithAuth('/ai/personality', {
+        method: 'PUT',
+        body: JSON.stringify({ personality_type: personalityType })
+    });
+};
+
 // ============ PROFILE ============
 export const changeUsername = async (username) => {
     return fetchWithAuth('/users/username', {
