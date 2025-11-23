@@ -306,3 +306,55 @@ export const addWeightEntry = async (weight) => {
 export const getWeightHistory = async (limit = 30) => {
     return fetchWithAuth(`/users/weight-history?limit=${limit}`);
 };
+
+export const uploadAvatar = async (imageUri) => {
+    const token = await AsyncStorage.getItem('token');
+
+    // Crear FormData para el upload
+    const formData = new FormData();
+
+    // Para React Native, necesitamos extraer el filename y tipo
+    const uriParts = imageUri.split('.');
+    const fileType = uriParts[uriParts.length - 1];
+
+    formData.append('avatar', {
+        uri: imageUri,
+        name: `avatar.${fileType}`,
+        type: `image/${fileType}`
+    });
+
+    const url = `${BASE_URL}/users/avatar`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                // NO establecer Content-Type, fetch lo hace automáticamente para FormData
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new ApiError(
+                data.message || data.error || 'Error al subir avatar',
+                response.status
+            );
+        }
+
+        return data;
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw new ApiError('No se pudo subir el avatar', 0);
+    }
+};
+
+export const deleteAvatar = async () => {
+    return fetchWithAuth('/users/avatar', {
+        method: 'DELETE'
+    });
+};
