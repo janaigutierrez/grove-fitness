@@ -16,9 +16,22 @@ import WorkoutScreen from '../screens/WorkoutScreen';
 import AIChatScreen from '../screens/AIChatScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import WeeklyScheduleScreen from '../screens/WeeklyScheduleScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Profile Stack Navigator
+function ProfileStack({ user, onLogout }) {
+    return (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="ProfileMain">
+                {(props) => <ProfileScreen {...props} user={user} onLogout={onLogout} />}
+            </Stack.Screen>
+            <Stack.Screen name="WeeklySchedule" component={WeeklyScheduleScreen} />
+        </Stack.Navigator>
+    );
+}
 
 // Navegador de tabs (app principal)
 function MainTabs({ user, token, onLogout }) {
@@ -53,7 +66,7 @@ function MainTabs({ user, token, onLogout }) {
                 {(props) => <ProgressScreen {...props} user={user} token={token} />}
             </Tab.Screen>
             <Tab.Screen name="Profile">
-                {(props) => <ProfileScreen {...props} user={user} onLogout={onLogout} />}
+                {(props) => <ProfileStack {...props} user={user} onLogout={onLogout} />}
             </Tab.Screen>
         </Tab.Navigator>
     );

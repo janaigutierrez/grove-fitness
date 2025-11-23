@@ -25,7 +25,7 @@ import {
   logout
 } from '../services/api';
 
-export default function ProfileScreen({ onLogout }) {
+export default function ProfileScreen({ navigation, onLogout }) {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -357,6 +357,14 @@ export default function ProfileScreen({ onLogout }) {
         >
           <Icon name="lock-closed-outline" size={20} color="#2D5016" />
           <Text style={styles.actionText}>Cambiar contraseña</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => navigation.navigate('WeeklySchedule')}
+        >
+          <Icon name="calendar-outline" size={20} color="#2D5016" />
+          <Text style={styles.actionText}>Schedule semanal</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
