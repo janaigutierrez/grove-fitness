@@ -72,6 +72,8 @@ const changePassword = async (userId, currentPassword, newPassword) => {
 
 // ========== UPLOAD AVATAR ==========
 const uploadAvatar = async (userId, file) => {
+    const fs = require('fs').promises;
+
     if (!file) {
         const error = new Error('No file provided');
         error.statusCode = 400;
@@ -89,6 +91,13 @@ const uploadAvatar = async (userId, file) => {
                 { quality: 'auto', fetch_format: 'auto' }
             ]
         });
+
+        // Delete temporary file after upload
+        try {
+            await fs.unlink(file.path);
+        } catch (unlinkError) {
+            console.error('Error deleting temp file:', unlinkError);
+        }
 
         // Guardar URL en BD
         const user = await User.findByIdAndUpdate(
@@ -114,8 +123,18 @@ const uploadAvatar = async (userId, file) => {
             }
         };
     } catch (error) {
+        // Clean up temp file if upload failed
+        if (file && file.path) {
+            try {
+                const fs = require('fs').promises;
+                await fs.unlink(file.path);
+            } catch (unlinkError) {
+                console.error('Error deleting temp file after failed upload:', unlinkError);
+            }
+        }
+
         console.error('Cloudinary upload error:', error);
-        const err = new Error('Failed to upload avatar');
+        const err = new Error(error.message || 'Failed to upload avatar');
         err.statusCode = 500;
         throw err;
     }
