@@ -44,7 +44,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
       setLoading(true);
       const [scheduleData, workoutsData] = await Promise.all([
         getWeeklySchedule(),
-        getWorkouts({ is_template: true })
+        getWorkouts() // Get ALL workouts, not just templates
       ]);
 
       setSchedule(scheduleData.weekly_schedule || {});
