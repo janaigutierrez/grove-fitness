@@ -30,6 +30,7 @@ import { handleApiError } from '../utils/errorHandler';
 import ExerciseSelector from '../components/common/ExerciseSelector';
 import AIWorkoutGeneratorModal from '../components/AIWorkoutGeneratorModal';
 import WorkoutCompletionModal from '../components/WorkoutCompletionModal';
+import ActiveWorkoutScreen from '../components/workout/ActiveWorkoutScreen';
 
 export default function WorkoutScreen({ user }) {
   // Estados principals
@@ -42,9 +43,6 @@ export default function WorkoutScreen({ user }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
   const [currentSessionId, setCurrentSessionId] = useState(null);
-  const [currentExercise, setCurrentExercise] = useState(0);
-  const [currentSet, setCurrentSet] = useState(1);
-  const [restTimer, setRestTimer] = useState(0);
   const [completedSets, setCompletedSets] = useState([]);
 
   // Modal de creació de workout
@@ -67,23 +65,6 @@ export default function WorkoutScreen({ user }) {
   useEffect(() => {
     loadWorkoutData();
   }, []);
-
-  // Timer de descanso
-  useEffect(() => {
-    let interval;
-    if (restTimer > 0) {
-      interval = setInterval(() => {
-        setRestTimer(prev => {
-          if (prev <= 1) {
-            Alert.alert("⏰ Descanso terminado!", "¡Siguiente serie!");
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [restTimer]);
 
   const loadWorkoutData = async () => {
     try {
@@ -284,8 +265,6 @@ export default function WorkoutScreen({ user }) {
 
       setCurrentSessionId(session.id);
       setSelectedWorkout(workout);
-      setCurrentExercise(0);
-      setCurrentSet(1);
       setCompletedSets([]);
       setModalVisible(true);
 
@@ -302,31 +281,9 @@ export default function WorkoutScreen({ user }) {
     }
   };
 
-  const completeSet = () => {
-    const exercise = selectedWorkout.exercises[currentExercise];
-    const totalSets = exercise.custom_sets || exercise.exercise_id.default_sets || 3;
-
-    const newCompletedSet = {
-      exercise_index: currentExercise,
-      set_number: currentSet,
-      completed_at: new Date().toISOString()
-    };
-
-    setCompletedSets([...completedSets, newCompletedSet]);
-
-    if (currentSet < totalSets) {
-      setCurrentSet(currentSet + 1);
-      setRestTimer(exercise.custom_rest_seconds || exercise.exercise_id.default_rest_seconds || 60);
-    } else if (currentExercise < selectedWorkout.exercises.length - 1) {
-      setCurrentExercise(currentExercise + 1);
-      setCurrentSet(1);
-      Alert.alert("✅ Exercici completat", "¡Següent exercici!");
-    } else {
-      handleCompleteWorkout();
-    }
-  };
-
-  const handleCompleteWorkout = () => {
+  const handleCompleteWorkout = (completedSets) => {
+    // Called from ActiveWorkoutScreen when workout is finished
+    setCompletedSets(completedSets || []);
     setCompletionModalVisible(true);
   };
 
@@ -409,6 +366,18 @@ export default function WorkoutScreen({ user }) {
           <Text style={{ color: 'white', marginTop: 10 }}>Carregant workouts...</Text>
         </SafeAreaView>
       </LinearGradient>
+    );
+  }
+
+  // Show active workout screen if workout is in progress
+  if (modalVisible && selectedWorkout) {
+    return (
+      <ActiveWorkoutScreen
+        workout={selectedWorkout}
+        sessionId={currentSessionId}
+        onComplete={handleCompleteWorkout}
+        onAbandon={handleAbandonWorkout}
+      />
     );
   }
 
@@ -674,85 +643,6 @@ export default function WorkoutScreen({ user }) {
                     )}
                   </TouchableOpacity>
                 </ScrollView>
-              </SafeAreaView>
-            </LinearGradient>
-          </Modal>
-
-          {/* MODAL D'ENTRENAMENT (ja existent) */}
-          <Modal visible={modalVisible} animationType="slide" transparent={false}>
-            <LinearGradient colors={['#2D5016', '#4CAF50']} style={{ flex: 1 }}>
-              <SafeAreaView style={styles.modalContainer}>
-                <View style={styles.modalHeader}>
-                  <TouchableOpacity onPress={handleAbandonWorkout} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color="white" />
-                  </TouchableOpacity>
-                  <Text style={styles.modalTitle}>{selectedWorkout?.name}</Text>
-                  <Text style={styles.modalProgress}>
-                    Exercici {currentExercise + 1}/{selectedWorkout?.exercises?.length || 0}
-                  </Text>
-                </View>
-
-                {selectedWorkout && selectedWorkout.exercises && selectedWorkout.exercises[currentExercise] && (
-                  <View style={styles.exerciseContainer}>
-                    <Text style={styles.exerciseNameModal}>
-                      {selectedWorkout.exercises[currentExercise].exercise_id?.name || 'Exercici'}
-                    </Text>
-
-                    <View style={styles.setInfo}>
-                      <Text style={styles.setCounter}>
-                        Sèrie {currentSet} de{' '}
-                        {selectedWorkout.exercises[currentExercise].custom_sets ||
-                          selectedWorkout.exercises[currentExercise].exercise_id?.default_sets ||
-                          3}
-                      </Text>
-                      <Text style={styles.repsInfo}>
-                        {selectedWorkout.exercises[currentExercise].custom_reps ||
-                          selectedWorkout.exercises[currentExercise].exercise_id?.default_reps ||
-                          10}{' '}
-                        repeticions
-                      </Text>
-                      {selectedWorkout.exercises[currentExercise].custom_weight && (
-                        <Text style={styles.weightInfo}>
-                          Pes: {selectedWorkout.exercises[currentExercise].custom_weight}
-                        </Text>
-                      )}
-                    </View>
-
-                    {restTimer > 0 && (
-                      <View style={styles.restContainer}>
-                        <Text style={styles.restTitle}>⏱️ Descans:</Text>
-                        <Text style={styles.restTimer}>{restTimer}s</Text>
-                      </View>
-                    )}
-
-                    <View style={styles.buttonContainer}>
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.completeButton]}
-                        onPress={completeSet}
-                        disabled={restTimer > 0}
-                      >
-                        <Text style={styles.actionButtonText}>
-                          {currentSet < (selectedWorkout.exercises[currentExercise].custom_sets ||
-                            selectedWorkout.exercises[currentExercise].exercise_id?.default_sets ||
-                            3)
-                            ? '✅ Sèrie Completada'
-                            : currentExercise < selectedWorkout.exercises.length - 1
-                              ? '➡️ Següent Exercici'
-                              : '🎉 Acabar Entreno'}
-                        </Text>
-                      </TouchableOpacity>
-
-                      {restTimer > 0 && (
-                        <TouchableOpacity
-                          style={[styles.actionButton, styles.skipButton]}
-                          onPress={() => setRestTimer(0)}
-                        >
-                          <Text style={styles.actionButtonText}>⏭️ Saltar Descans</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                )}
               </SafeAreaView>
             </LinearGradient>
           </Modal>
