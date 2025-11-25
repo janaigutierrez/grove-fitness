@@ -493,29 +493,41 @@ export default function ProfileScreen({ navigation, onLogout }) {
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Contraseña actual"
-              secureTextEntry
-              value={passwordForm.current}
-              onChangeText={(text) => setPasswordForm({ ...passwordForm, current: text })}
-            />
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Contraseña actual</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ingresa tu contraseña actual"
+                placeholderTextColor="#999"
+                secureTextEntry
+                value={passwordForm.current}
+                onChangeText={(text) => setPasswordForm({ ...passwordForm, current: text })}
+              />
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Nueva contraseña"
-              secureTextEntry
-              value={passwordForm.new}
-              onChangeText={(text) => setPasswordForm({ ...passwordForm, new: text })}
-            />
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Nueva contraseña</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Mínimo 6 caracteres"
+                placeholderTextColor="#999"
+                secureTextEntry
+                value={passwordForm.new}
+                onChangeText={(text) => setPasswordForm({ ...passwordForm, new: text })}
+              />
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Confirmar nueva contraseña"
-              secureTextEntry
-              value={passwordForm.confirm}
-              onChangeText={(text) => setPasswordForm({ ...passwordForm, confirm: text })}
-            />
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Confirmar nueva contraseña</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Vuelve a ingresar la nueva contraseña"
+                placeholderTextColor="#999"
+                secureTextEntry
+                value={passwordForm.confirm}
+                onChangeText={(text) => setPasswordForm({ ...passwordForm, confirm: text })}
+              />
+            </View>
 
             <TouchableOpacity
               style={styles.modalSaveBtn}
@@ -757,5 +769,14 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2D5016',
+    marginBottom: 8,
   },
 });

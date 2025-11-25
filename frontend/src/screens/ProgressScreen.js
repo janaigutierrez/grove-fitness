@@ -174,7 +174,8 @@ export default function ProgressScreen() {
             style={styles.addWeightBtn}
             onPress={() => setAddWeightModal(true)}
           >
-            <Icon name="add-circle" size={24} color="#4CAF50" />
+            <Icon name="add-circle" size={20} color="#fff" />
+            <Text style={styles.addWeightText}>Añadir Peso</Text>
           </TouchableOpacity>
         </View>
 
@@ -192,11 +193,18 @@ export default function ProgressScreen() {
             <Text style={styles.statLabel}>Semanas activas</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={[styles.statCard, styles.weightCard]}
+            onPress={() => setAddWeightModal(true)}
+          >
             <Icon name="fitness" size={24} color="#4CAF50" style={styles.statIcon} />
             <Text style={styles.statValue}>{currentWeight ? `${currentWeight}kg` : '-'}</Text>
             <Text style={styles.statLabel}>Peso actual</Text>
-          </View>
+            <View style={styles.addWeightHint}>
+              <Icon name="add" size={14} color="#4CAF50" />
+              <Text style={styles.addWeightHintText}>Tap para añadir</Text>
+            </View>
+          </TouchableOpacity>
 
           <View style={styles.statCard}>
             <Icon name="trending-up" size={24} color={weightChange >= 0 ? '#4CAF50' : '#f44336'} style={styles.statIcon} />
@@ -492,7 +500,34 @@ const styles = StyleSheet.create({
     color: '#2D5016',
   },
   addWeightBtn: {
-    padding: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  addWeightText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  weightCard: {
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    borderStyle: 'dashed',
+  },
+  addWeightHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 2,
+  },
+  addWeightHintText: {
+    fontSize: 11,
+    color: '#4CAF50',
+    fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',
