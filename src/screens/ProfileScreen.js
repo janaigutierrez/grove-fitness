@@ -5,8 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Modal,
-  TextInput,
   Alert,
   Image,
   ActivityIndicator
@@ -24,6 +22,10 @@ import {
   getUserStats,
   logout
 } from '../services/api';
+import Button from '../components/common/Button';
+import EditProfileModal from '../components/profile/EditProfileModal';
+import ChangeUsernameModal from '../components/profile/ChangeUsernameModal';
+import ChangePasswordModal from '../components/profile/ChangePasswordModal';
 
 export default function ProfileScreen({ navigation, onLogout }) {
   const [user, setUser] = useState(null);
@@ -335,214 +337,81 @@ export default function ProfileScreen({ navigation, onLogout }) {
         </View>
 
         {/* Action Buttons */}
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => setEditProfileModal(true)}
-        >
-          <Icon name="create-outline" size={20} color="#2D5016" />
-          <Text style={styles.actionText}>Editar perfil</Text>
-        </TouchableOpacity>
+        <View style={styles.actionsContainer}>
+          <Button
+            text="Editar perfil"
+            icon="create-outline"
+            variant="outline"
+            onPress={() => setEditProfileModal(true)}
+            fullWidth
+            style={styles.actionBtn}
+          />
 
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => setChangeUsernameModal(true)}
-        >
-          <Icon name="at-outline" size={20} color="#2D5016" />
-          <Text style={styles.actionText}>Cambiar nombre de usuario</Text>
-        </TouchableOpacity>
+          <Button
+            text="Cambiar nombre de usuario"
+            icon="at-outline"
+            variant="outline"
+            onPress={() => setChangeUsernameModal(true)}
+            fullWidth
+            style={styles.actionBtn}
+          />
 
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => setChangePasswordModal(true)}
-        >
-          <Icon name="lock-closed-outline" size={20} color="#2D5016" />
-          <Text style={styles.actionText}>Cambiar contraseña</Text>
-        </TouchableOpacity>
+          <Button
+            text="Cambiar contraseña"
+            icon="lock-closed-outline"
+            variant="outline"
+            onPress={() => setChangePasswordModal(true)}
+            fullWidth
+            style={styles.actionBtn}
+          />
 
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => navigation.navigate('WeeklySchedule')}
-        >
-          <Icon name="calendar-outline" size={20} color="#2D5016" />
-          <Text style={styles.actionText}>Schedule semanal</Text>
-        </TouchableOpacity>
+          <Button
+            text="Schedule semanal"
+            icon="calendar-outline"
+            variant="outline"
+            onPress={() => navigation.navigate('WeeklySchedule')}
+            fullWidth
+            style={styles.actionBtn}
+          />
 
-        <TouchableOpacity
-          style={styles.logoutBtn}
-          onPress={handleLogout}
-        >
-          <Icon name="log-out-outline" size={20} color="#d32f2f" />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
-        </TouchableOpacity>
+          <Button
+            text="Cerrar sesión"
+            icon="log-out-outline"
+            variant="danger"
+            onPress={handleLogout}
+            fullWidth
+            style={styles.logoutBtn}
+          />
+        </View>
       </ScrollView>
 
-      {/* Edit Profile Modal */}
-      <Modal
+      {/* Modals */}
+      <EditProfileModal
         visible={editProfileModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setEditProfileModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Editar Perfil</Text>
-              <TouchableOpacity onPress={() => setEditProfileModal(false)}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
+        onClose={() => setEditProfileModal(false)}
+        profileForm={profileForm}
+        onFormChange={setProfileForm}
+        onSave={handleUpdateProfile}
+        loading={loading}
+      />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Nombre"
-              value={profileForm.name}
-              onChangeText={(text) => setProfileForm({ ...profileForm, name: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Peso (kg)"
-              keyboardType="decimal-pad"
-              value={profileForm.weight}
-              onChangeText={(text) => setProfileForm({ ...profileForm, weight: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Altura (cm)"
-              keyboardType="number-pad"
-              value={profileForm.height}
-              onChangeText={(text) => setProfileForm({ ...profileForm, height: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Edad"
-              keyboardType="number-pad"
-              value={profileForm.age}
-              onChangeText={(text) => setProfileForm({ ...profileForm, age: text })}
-            />
-
-            <TouchableOpacity
-              style={styles.modalSaveBtn}
-              onPress={handleUpdateProfile}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.modalSaveBtnText}>Guardar cambios</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Change Username Modal */}
-      <Modal
+      <ChangeUsernameModal
         visible={changeUsernameModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setChangeUsernameModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Cambiar Nombre de Usuario</Text>
-              <TouchableOpacity onPress={() => setChangeUsernameModal(false)}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
+        onClose={() => setChangeUsernameModal(false)}
+        username={newUsername}
+        onUsernameChange={setNewUsername}
+        onSave={handleChangeUsername}
+        loading={loading}
+      />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Nuevo nombre de usuario"
-              value={newUsername}
-              onChangeText={setNewUsername}
-              autoCapitalize="none"
-            />
-
-            <TouchableOpacity
-              style={styles.modalSaveBtn}
-              onPress={handleChangeUsername}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.modalSaveBtnText}>Cambiar</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Change Password Modal */}
-      <Modal
+      <ChangePasswordModal
         visible={changePasswordModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setChangePasswordModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Cambiar Contraseña</Text>
-              <TouchableOpacity onPress={() => setChangePasswordModal(false)}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Contraseña actual</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ingresa tu contraseña actual"
-                placeholderTextColor="#999"
-                secureTextEntry
-                value={passwordForm.current}
-                onChangeText={(text) => setPasswordForm({ ...passwordForm, current: text })}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Nueva contraseña</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Mínimo 6 caracteres"
-                placeholderTextColor="#999"
-                secureTextEntry
-                value={passwordForm.new}
-                onChangeText={(text) => setPasswordForm({ ...passwordForm, new: text })}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Confirmar nueva contraseña</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Vuelve a ingresar la nueva contraseña"
-                placeholderTextColor="#999"
-                secureTextEntry
-                value={passwordForm.confirm}
-                onChangeText={(text) => setPasswordForm({ ...passwordForm, confirm: text })}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={styles.modalSaveBtn}
-              onPress={handleChangePassword}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.modalSaveBtnText}>Cambiar contraseña</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setChangePasswordModal(false)}
+        passwordForm={passwordForm}
+        onFormChange={setPasswordForm}
+        onSave={handleChangePassword}
+        loading={loading}
+      />
     </SafeAreaView>
   );
 }
@@ -693,90 +562,14 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '600',
   },
+  actionsContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
   actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    paddingVertical: 15,
-    borderRadius: 10,
     marginBottom: 10,
   },
-  actionText: {
-    marginLeft: 8,
-    color: '#2D5016',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
   logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    paddingVertical: 15,
-    borderRadius: 10,
-    marginBottom: 30,
-    borderWidth: 1,
-    borderColor: '#d32f2f',
-  },
-  logoutText: {
-    marginLeft: 8,
-    color: '#d32f2f',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D5016',
-  },
-  input: {
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  modalSaveBtn: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
     marginTop: 10,
-  },
-  modalSaveBtnText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D5016',
-    marginBottom: 8,
   },
 });
