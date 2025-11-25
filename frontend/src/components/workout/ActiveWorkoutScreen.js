@@ -84,11 +84,11 @@ export default function ActiveWorkoutScreen({
     else if (currentExercise < totalExercises - 1) {
       setCurrentExercise(currentExercise + 1);
       setCurrentSet(1);
-      setRestTimer(0); // No rest between exercises, just show next one
+      setRestTimer(120); // 2 minutes rest between exercises
     }
     // Workout completado
     else {
-      onComplete(completedSets);
+      onComplete([...completedSets, newCompletedSet]);
     }
   };
 

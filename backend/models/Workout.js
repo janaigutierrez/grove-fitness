@@ -37,7 +37,7 @@ const workoutSchema = new mongoose.Schema({
     // Clasificación
     workout_type: {
         type: String,
-        enum: ['push', 'pull', 'legs', 'full_body', 'cardio', 'upper', 'lower', 'custom'],
+        enum: ['push', 'pull', 'legs', 'full_body', 'cardio', 'upper', 'lower', 'core', 'custom'],
         default: 'custom'
     },
     difficulty: {

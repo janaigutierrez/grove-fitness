@@ -284,7 +284,8 @@ export default function WorkoutScreen({ user }) {
   const handleCompleteWorkout = (completedSets) => {
     // Called from ActiveWorkoutScreen when workout is finished
     setCompletedSets(completedSets || []);
-    setCompletionModalVisible(true);
+    setModalVisible(false); // Hide active workout screen
+    setCompletionModalVisible(true); // Show completion modal
   };
 
   const handleCompletionSubmit = async (sessionData) => {
