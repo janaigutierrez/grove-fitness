@@ -59,6 +59,70 @@ export default function DashboardScreen({ user }) {
     return workoutsInCurrentLevel / 4; // 0 a 1
   };
 
+  // Pool de frases motivacionals
+  const getMotivationalPhrase = () => {
+    const phrases = {
+      highStreak: [
+        `🔥 Increïble! ${stats?.currentStreak} dies consecutius entrenant. Ets imparable!`,
+        `💪 ${stats?.currentStreak} dies de ratxa! El teu cos t'ho agrairà.`,
+        `⚡ ${stats?.currentStreak} dies sense parar! La constància és la clau de l'èxit.`,
+        `🏆 ${stats?.currentStreak} dies seguint amb disciplina. Així s'aconsegueixen resultats!`,
+      ],
+      mediumStreak: [
+        `👏 ${stats?.currentStreak} dies de ratxa! Vas per bon camí, continua així!`,
+        `💚 ${stats?.currentStreak} dies amb determinació. Cada dia compta!`,
+        `🌟 Portes ${stats?.currentStreak} dies entrenant. El progrés és inevitable!`,
+        `🔋 ${stats?.currentStreak} dies carregant energia. Segueix endavant!`,
+      ],
+      lowStreak: [
+        `🌱 ${stats?.currentStreak} dies! Els petits hàbits creen grans resultats.`,
+        `🚀 ${stats?.currentStreak} dies i comptant. Cada començament és important!`,
+        `💫 ${stats?.currentStreak} dies d'esforç. El camí de mil milles comença amb un pas.`,
+        `🎯 ${stats?.currentStreak} dies cap al teu objectiu. Continua construint!`,
+      ],
+      noStreak: [
+        "🌱 Els petits hàbits creen grans resultats. Comença avui!",
+        "💪 El millor moment per començar és ara. El teu cos t'ho agrairà!",
+        "🔥 Cada expert va ser un principiant. Fes el primer pas!",
+        "⚡ La motivació és el que et posa en marxa, l'hàbit és el que et manté.",
+        "🎯 No cal ser gran per començar, però cal començar per ser gran.",
+      ],
+      manyWorkouts: [
+        `🏆 ${stats?.totalWorkouts} workouts completats! Ets una màquina!`,
+        `💎 ${stats?.totalWorkouts} sessions a la butxaca. El treball dur paga!`,
+        `🔱 ${stats?.totalWorkouts} workouts i comptant. Imparable!`,
+      ],
+      thisWeek: [
+        `🔥 ${stats?.thisWeekWorkouts} workouts aquesta setmana! Quina consistència!`,
+        `⚡ Ja portes ${stats?.thisWeekWorkouts} sessions aquesta setmana. Fantàstic!`,
+        `💪 ${stats?.thisWeekWorkouts} workouts aquesta setmana. Així es fa!`,
+      ],
+    };
+
+    // Seleccionar categoria segons stats
+    let category;
+    const streak = stats?.currentStreak || 0;
+    const totalWorkouts = stats?.totalWorkouts || 0;
+    const thisWeek = stats?.thisWeekWorkouts || 0;
+
+    if (totalWorkouts >= 50) {
+      category = 'manyWorkouts';
+    } else if (thisWeek >= 3) {
+      category = 'thisWeek';
+    } else if (streak >= 7) {
+      category = 'highStreak';
+    } else if (streak >= 3) {
+      category = 'mediumStreak';
+    } else if (streak >= 1) {
+      category = 'lowStreak';
+    } else {
+      category = 'noStreak';
+    }
+
+    const categoryPhrases = phrases[category];
+    return categoryPhrases[Math.floor(Math.random() * categoryPhrases.length)];
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -228,25 +292,8 @@ export default function DashboardScreen({ user }) {
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>🔥 Motivació</Text>
               <Text style={styles.sectionText}>
-                {stats?.currentStreak > 0
-                  ? `Portes ${stats.currentStreak} dies de ratxa! Continua així! 💪`
-                  : "Els petits hàbits creen grans resultats. Comença avui! 🌱"
-                }
+                {getMotivationalPhrase()}
               </Text>
-            </View>
-
-            {/* Chat IA (preview) */}
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>🤖 Coach IA</Text>
-              <TouchableOpacity
-                style={styles.chatPreview}
-                onPress={() => Alert.alert('Chat IA', 'Funcionalitat disponible aviat!')}
-              >
-                <Ionicons name="chatbubble-ellipses-outline" size={24} color="white" />
-                <Text style={styles.chatPreviewText}>
-                  Parla amb el teu coach personalitzat...
-                </Text>
-              </TouchableOpacity>
             </View>
           </ScrollView>
         </LinearGradient>
@@ -438,17 +485,5 @@ const styles = StyleSheet.create({
   sessionVolume: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.9)',
-  },
-  chatPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    padding: 16,
-  },
-  chatPreviewText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    marginLeft: 12,
   },
 });
