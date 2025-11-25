@@ -67,7 +67,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
 
     const newSchedule = {
       ...schedule,
-      [selectedDay]: workout._id
+      [selectedDay]: workout.id || workout._id
     };
 
     setSchedule(newSchedule);
