@@ -14,6 +14,7 @@ import { login } from '../services/api';
 import { handleApiError, ValidationError } from '../utils/errorHandler';
 import ErrorModal from '../components/common/ErrorModal';
 import useModal from '../hooks/useModal';
+import colors from '../constants/colors';
 
 export default function LoginScreen({ navigation, onLogin }) {
     const [email, setEmail] = useState('');

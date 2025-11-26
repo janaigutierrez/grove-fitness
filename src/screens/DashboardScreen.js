@@ -9,6 +9,7 @@ import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
 import ErrorModal from '../components/common/ErrorModal';
 import InfoModal from '../components/common/InfoModal';
 import useModal from '../hooks/useModal';
+import colors from '../constants/colors';
 
 export default function DashboardScreen({ user }) {
   const [stats, setStats] = useState(null);

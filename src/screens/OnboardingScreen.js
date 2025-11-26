@@ -15,6 +15,7 @@ import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
 import ErrorModal from '../components/common/ErrorModal';
 import InfoModal from '../components/common/InfoModal';
 import useModal from '../hooks/useModal';
+import colors from '../constants/colors';
 
 export default function OnboardingScreen({ route, onComplete }) {
   const { token, user } = route?.params || {};

@@ -16,6 +16,7 @@ import { handleApiError, ValidationError, formatSuccessMessage } from '../utils/
 import ErrorModal from '../components/common/ErrorModal';
 import InfoModal from '../components/common/InfoModal';
 import useModal from '../hooks/useModal';
+import colors from '../constants/colors';
 
 export default function RegisterScreen({ navigation, onLogin }) {
     const [formData, setFormData] = useState({
