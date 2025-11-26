@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Image,
   ActivityIndicator
 } from 'react-native';
@@ -26,6 +25,10 @@ import Button from '../components/common/Button';
 import EditProfileModal from '../components/profile/EditProfileModal';
 import ChangeUsernameModal from '../components/profile/ChangeUsernameModal';
 import ChangePasswordModal from '../components/profile/ChangePasswordModal';
+import ConfirmModal from '../components/common/ConfirmModal';
+import InfoModal from '../components/common/InfoModal';
+import ErrorModal from '../components/common/ErrorModal';
+import useModal from '../hooks/useModal';
 
 export default function ProfileScreen({ navigation, onLogout }) {
   const [user, setUser] = useState(null);
@@ -37,6 +40,11 @@ export default function ProfileScreen({ navigation, onLogout }) {
   const [editProfileModal, setEditProfileModal] = useState(false);
   const [changeUsernameModal, setChangeUsernameModal] = useState(false);
   const [changePasswordModal, setChangePasswordModal] = useState(false);
+
+  // Custom modals
+  const confirmModal = useModal();
+  const infoModal = useModal();
+  const errorModal = useModal();
 
   // Form states
   const [profileForm, setProfileForm] = useState({
@@ -75,7 +83,9 @@ export default function ProfileScreen({ navigation, onLogout }) {
       setNewUsername(userData.username || '');
     } catch (error) {
       console.error('Error loading user data:', error);
-      Alert.alert('Error', 'No se pudo cargar el perfil');
+      errorModal.openModal({
+        message: 'No se pudo cargar el perfil',
+      });
     } finally {
       setLoading(false);
     }
@@ -92,7 +102,10 @@ export default function ProfileScreen({ navigation, onLogout }) {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permissionResult.granted) {
-        Alert.alert('Permiso requerido', 'Necesitas permitir acceso a la galería');
+        errorModal.openModal({
+          title: 'Permiso requerido',
+          message: 'Necesitas permitir acceso a la galería',
+        });
         return;
       }
 
@@ -107,41 +120,47 @@ export default function ProfileScreen({ navigation, onLogout }) {
         setLoading(true);
         const response = await uploadAvatar(result.assets[0].uri);
         setUser({ ...user, avatar_url: response.avatar_url });
-        Alert.alert('Éxito', 'Avatar actualizado');
         setLoading(false);
+        infoModal.openModal({
+          title: 'Éxito',
+          message: 'Avatar actualizado',
+        });
       }
     } catch (error) {
       setLoading(false);
       console.error('Error uploading avatar:', error);
-      Alert.alert('Error', error.message || 'No se pudo subir el avatar');
+      errorModal.openModal({
+        message: error.message || 'No se pudo subir el avatar',
+      });
     }
   };
 
   const handleDeleteAvatar = async () => {
-    Alert.alert(
-      'Eliminar avatar',
-      '¿Estás seguro de que quieres eliminar tu avatar?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await deleteAvatar();
-              setUser({ ...user, avatar_url: null });
-              Alert.alert('Éxito', 'Avatar eliminado');
-              setLoading(false);
-            } catch (error) {
-              setLoading(false);
-              console.error('Error deleting avatar:', error);
-              Alert.alert('Error', 'No se pudo eliminar el avatar');
-            }
-          }
+    confirmModal.openModal({
+      title: 'Eliminar avatar',
+      message: '¿Estás seguro de que quieres eliminar tu avatar?',
+      confirmText: 'Eliminar',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          confirmModal.closeModal();
+          setLoading(true);
+          await deleteAvatar();
+          setUser({ ...user, avatar_url: null });
+          setLoading(false);
+          infoModal.openModal({
+            title: 'Éxito',
+            message: 'Avatar eliminado',
+          });
+        } catch (error) {
+          setLoading(false);
+          console.error('Error deleting avatar:', error);
+          errorModal.openModal({
+            message: 'No se pudo eliminar el avatar',
+          });
         }
-      ]
-    );
+      },
+    });
   };
 
   const handleUpdateProfile = async () => {
@@ -157,11 +176,16 @@ export default function ProfileScreen({ navigation, onLogout }) {
       const response = await updateUserProfile(updateData);
       setUser(response.user);
       setEditProfileModal(false);
-      Alert.alert('Éxito', 'Perfil actualizado');
       await loadUserData();
+      infoModal.openModal({
+        title: 'Éxito',
+        message: 'Perfil actualizado',
+      });
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', error.message || 'No se pudo actualizar el perfil');
+      errorModal.openModal({
+        message: error.message || 'No se pudo actualizar el perfil',
+      });
     } finally {
       setLoading(false);
     }
@@ -169,7 +193,9 @@ export default function ProfileScreen({ navigation, onLogout }) {
 
   const handleChangeUsername = async () => {
     if (!newUsername.trim()) {
-      Alert.alert('Error', 'El nombre de usuario no puede estar vacío');
+      errorModal.openModal({
+        message: 'El nombre de usuario no puede estar vacío',
+      });
       return;
     }
 
@@ -178,10 +204,15 @@ export default function ProfileScreen({ navigation, onLogout }) {
       const response = await changeUsername(newUsername.trim());
       setUser(response.user);
       setChangeUsernameModal(false);
-      Alert.alert('Éxito', 'Nombre de usuario actualizado');
+      infoModal.openModal({
+        title: 'Éxito',
+        message: 'Nombre de usuario actualizado',
+      });
     } catch (error) {
       console.error('Error changing username:', error);
-      Alert.alert('Error', error.message || 'No se pudo cambiar el nombre de usuario');
+      errorModal.openModal({
+        message: error.message || 'No se pudo cambiar el nombre de usuario',
+      });
     } finally {
       setLoading(false);
     }
@@ -189,17 +220,23 @@ export default function ProfileScreen({ navigation, onLogout }) {
 
   const handleChangePassword = async () => {
     if (!passwordForm.current || !passwordForm.new || !passwordForm.confirm) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      errorModal.openModal({
+        message: 'Por favor completa todos los campos',
+      });
       return;
     }
 
     if (passwordForm.new !== passwordForm.confirm) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      errorModal.openModal({
+        message: 'Las contraseñas no coinciden',
+      });
       return;
     }
 
     if (passwordForm.new.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      errorModal.openModal({
+        message: 'La contraseña debe tener al menos 6 caracteres',
+      });
       return;
     }
 
@@ -208,39 +245,38 @@ export default function ProfileScreen({ navigation, onLogout }) {
       await changePassword(passwordForm.current, passwordForm.new);
       setChangePasswordModal(false);
       setPasswordForm({ current: '', new: '', confirm: '' });
-      Alert.alert(
-        'Éxito',
-        'Contraseña cambiada. Por favor inicia sesión nuevamente',
-        [{ text: 'OK', onPress: handleLogout }]
-      );
+      infoModal.openModal({
+        title: 'Éxito',
+        message: 'Contraseña cambiada. Por favor inicia sesión nuevamente',
+        buttonText: 'Cerrar sesión',
+        onClose: handleLogout,
+      });
     } catch (error) {
       console.error('Error changing password:', error);
-      Alert.alert('Error', error.message || 'No se pudo cambiar la contraseña');
+      errorModal.openModal({
+        message: error.message || 'No se pudo cambiar la contraseña',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Cerrar sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Salir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-              if (onLogout) onLogout();
-            } catch (error) {
-              console.error('Error logging out:', error);
-            }
-          }
+    confirmModal.openModal({
+      title: 'Cerrar sesión',
+      message: '¿Estás seguro de que quieres cerrar sesión?',
+      confirmText: 'Salir',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          confirmModal.closeModal();
+          await logout();
+          if (onLogout) onLogout();
+        } catch (error) {
+          console.error('Error logging out:', error);
         }
-      ]
-    );
+      },
+    });
   };
 
   const getInitials = (name) => {
@@ -411,6 +447,38 @@ export default function ProfileScreen({ navigation, onLogout }) {
         onFormChange={setPasswordForm}
         onSave={handleChangePassword}
         loading={loading}
+      />
+
+      {/* System Modals */}
+      <ConfirmModal
+        visible={confirmModal.visible}
+        title={confirmModal.modalData.title}
+        message={confirmModal.modalData.message}
+        confirmText={confirmModal.modalData.confirmText}
+        cancelText={confirmModal.modalData.cancelText}
+        variant={confirmModal.modalData.variant}
+        icon={confirmModal.modalData.icon}
+        onConfirm={confirmModal.modalData.onConfirm || confirmModal.closeModal}
+        onCancel={confirmModal.closeModal}
+      />
+
+      <InfoModal
+        visible={infoModal.visible}
+        title={infoModal.modalData.title}
+        message={infoModal.modalData.message}
+        buttonText={infoModal.modalData.buttonText}
+        variant={infoModal.modalData.variant}
+        icon={infoModal.modalData.icon}
+        onClose={infoModal.modalData.onClose || infoModal.closeModal}
+      />
+
+      <ErrorModal
+        visible={errorModal.visible}
+        title={errorModal.modalData.title}
+        message={errorModal.modalData.message}
+        buttonText={errorModal.modalData.buttonText}
+        icon={errorModal.modalData.icon}
+        onClose={errorModal.closeModal}
       />
     </SafeAreaView>
   );
