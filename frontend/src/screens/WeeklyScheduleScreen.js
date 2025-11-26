@@ -20,6 +20,7 @@ import ConfirmModal from '../components/common/ConfirmModal';
 import InfoModal from '../components/common/InfoModal';
 import ErrorModal from '../components/common/ErrorModal';
 import useModal from '../hooks/useModal';
+import colors from '../constants/colors';
 
 const DAYS_OF_WEEK = [
   { key: 'monday', label: 'Lunes', icon: 'moon' },
