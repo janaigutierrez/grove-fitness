@@ -5,18 +5,25 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { updatePreferences, updateUserProfile } from '../services/api';
+import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
+import ErrorModal from '../components/common/ErrorModal';
+import InfoModal from '../components/common/InfoModal';
+import useModal from '../hooks/useModal';
 
 export default function OnboardingScreen({ route, onComplete }) {
   const { token, user } = route?.params || {};
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // System modals
+  const errorModal = useModal();
+  const infoModal = useModal();
 
   const [preferences, setPreferences] = useState({
     fitness_level: '',
@@ -171,26 +178,33 @@ export default function OnboardingScreen({ route, onComplete }) {
         goals: preferences.goals
       });
 
-      Alert.alert(
-        '🎉 ¡Configuración completa!',
-        '¡Todo listo para empezar! Vamos a crear tu primera rutina personalizada.',
-        [
-          {
-            text: 'Comenzar',
-            onPress: () => {
-              if (onComplete) {
-                onComplete(token, user);
-              }
-            }
+      const successInfo = formatSuccessMessage('¡Todo listo para empezar! Vamos a crear tu primera rutina personalizada.', 'success');
+      infoModal.openModal({
+        title: '🎉 ¡Configuración completa!',
+        message: successInfo.message,
+        icon: successInfo.icon,
+        buttonText: 'Comenzar',
+        onClose: () => {
+          infoModal.closeModal();
+          if (onComplete) {
+            onComplete(token, user);
           }
-        ]
-      );
+        }
+      });
     } catch (error) {
       console.error('Error saving preferences:', error);
-      Alert.alert('Error', 'No se pudieron guardar las preferencias. Puedes configurarlas más tarde desde el perfil.');
-      if (onComplete) {
-        onComplete(token, user);
-      }
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: 'Error',
+        message: 'No se pudieron guardar las preferencias. Puedes configurarlas más tarde desde el perfil.',
+        icon: errorInfo.icon,
+        onClose: () => {
+          errorModal.closeModal();
+          if (onComplete) {
+            onComplete(token, user);
+          }
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -299,6 +313,23 @@ export default function OnboardingScreen({ route, onComplete }) {
               )}
             </TouchableOpacity>
           </View>
+
+          {/* System Modals */}
+          <ErrorModal
+            visible={errorModal.visible}
+            title={errorModal.modalData.title}
+            message={errorModal.modalData.message}
+            icon={errorModal.modalData.icon}
+            onClose={errorModal.modalData.onClose || errorModal.closeModal}
+          />
+          <InfoModal
+            visible={infoModal.visible}
+            title={infoModal.modalData.title}
+            message={infoModal.modalData.message}
+            buttonText={infoModal.modalData.buttonText}
+            icon={infoModal.modalData.icon}
+            onClose={infoModal.modalData.onClose || infoModal.closeModal}
+          />
         </View>
       </SafeAreaView>
     </LinearGradient>

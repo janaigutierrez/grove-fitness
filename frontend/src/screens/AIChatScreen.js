@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Modal
@@ -15,6 +14,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { chatWithAI, getCurrentUser, changeAIPersonality } from '../services/api';
+import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
+import ErrorModal from '../components/common/ErrorModal';
+import InfoModal from '../components/common/InfoModal';
+import useModal from '../hooks/useModal';
 
 export default function AIChatScreen() {
   const [messages, setMessages] = useState([]);
@@ -24,6 +27,10 @@ export default function AIChatScreen() {
   const [personalityModalVisible, setPersonalityModalVisible] = useState(false);
   const [changingPersonality, setChangingPersonality] = useState(false);
   const scrollViewRef = useRef();
+
+  // System modals
+  const errorModal = useModal();
+  const infoModal = useModal();
 
   useEffect(() => {
     loadUser();
@@ -79,7 +86,12 @@ export default function AIChatScreen() {
       }, 100);
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', error.message || 'No se pudo enviar el mensaje');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message || 'No se pudo enviar el mensaje',
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
     }
@@ -94,16 +106,24 @@ export default function AIChatScreen() {
       setUser({ ...user, ai_personality_type: personalityType });
       setPersonalityModalVisible(false);
 
-      Alert.alert(
-        'Personalidad actualizada',
-        `Tu entrenador IA ahora tiene personalidad ${personalityType}`
-      );
+      const successInfo = formatSuccessMessage(`Tu entrenador IA ahora tiene personalidad ${personalityType}`, 'success');
+      infoModal.openModal({
+        title: 'Personalidad actualizada',
+        message: successInfo.message,
+        icon: successInfo.icon,
+        onClose: infoModal.closeModal,
+      });
 
       // Recargar usuario para asegurar que esté sincronizado
       await loadUser();
     } catch (error) {
       console.error('Error changing personality:', error);
-      Alert.alert('Error', error.message || 'No se pudo cambiar la personalidad');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: 'Error',
+        message: errorInfo.message || 'No se pudo cambiar la personalidad',
+        icon: errorInfo.icon,
+      });
     } finally {
       setChangingPersonality(false);
     }
@@ -386,6 +406,22 @@ export default function AIChatScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* System Modals */}
+        <ErrorModal
+          visible={errorModal.visible}
+          title={errorModal.modalData.title}
+          message={errorModal.modalData.message}
+          icon={errorModal.modalData.icon}
+          onClose={errorModal.modalData.onClose || errorModal.closeModal}
+        />
+        <InfoModal
+          visible={infoModal.visible}
+          title={infoModal.modalData.title}
+          message={infoModal.modalData.message}
+          icon={infoModal.modalData.icon}
+          onClose={infoModal.modalData.onClose || infoModal.closeModal}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ImageBackground,
   ActivityIndicator,
   RefreshControl,
@@ -23,13 +22,17 @@ import {
   getExercises,
   createExercise
 } from '../services/api';
-import { handleApiError } from '../utils/errorHandler';
+import { handleApiError, formatSuccessMessage, ValidationError } from '../utils/errorHandler';
 import AIWorkoutGeneratorModal from '../components/AIWorkoutGeneratorModal';
 import WorkoutCompletionModal from '../components/WorkoutCompletionModal';
 import ActiveWorkoutScreen from '../components/workout/ActiveWorkoutScreen';
 import CreateWorkoutModal from '../components/workout/CreateWorkoutModal';
 import WorkoutCard from '../components/workout/WorkoutCard';
 import EmptyState from '../components/common/EmptyState';
+import ConfirmModal from '../components/common/ConfirmModal';
+import InfoModal from '../components/common/InfoModal';
+import ErrorModal from '../components/common/ErrorModal';
+import useModal from '../hooks/useModal';
 
 export default function WorkoutScreen({ user }) {
   // Estados principals
@@ -61,6 +64,11 @@ export default function WorkoutScreen({ user }) {
   const [creating, setCreating] = useState(false);
   const [availableExercises, setAvailableExercises] = useState([]);
 
+  // System modals
+  const confirmModal = useModal();
+  const infoModal = useModal();
+  const errorModal = useModal();
+
   useEffect(() => {
     loadWorkoutData();
   }, []);
@@ -83,7 +91,11 @@ export default function WorkoutScreen({ user }) {
     } catch (error) {
       console.error('❌ Error carregant workouts:', error);
       const errorInfo = handleApiError(error);
-      Alert.alert(errorInfo.title, errorInfo.message);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -117,7 +129,13 @@ export default function WorkoutScreen({ user }) {
   const handleCreateWorkout = async () => {
     // Validacions
     if (!newWorkout.name.trim()) {
-      Alert.alert('Error', 'El workout necessita un nom');
+      const validationError = new ValidationError('El workout necesita un nombre', 'name');
+      const errorInfo = handleApiError(validationError);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
       return;
     }
 
@@ -126,7 +144,13 @@ export default function WorkoutScreen({ user }) {
     );
 
     if (validExercises.length === 0) {
-      Alert.alert('Error', 'Has d\'afegir almenys un exercici vàlid');
+      const validationError = new ValidationError('Debes añadir al menos un ejercicio válido', 'exercises');
+      const errorInfo = handleApiError(validationError);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
       return;
     }
 
@@ -202,25 +226,28 @@ export default function WorkoutScreen({ user }) {
       console.log('📝 Creant workout:', workoutData);
       const createdWorkout = await createWorkout(workoutData);
 
-      Alert.alert(
-        '✅ Workout Creat!',
-        `El workout "${createdWorkout.name}" s'ha creat correctament`,
-        [
-          {
-            text: 'Genial!',
-            onPress: () => {
-              setCreateModalVisible(false);
-              resetCreateForm();
-              loadWorkoutData(); // Recarregar llista
-            }
-          }
-        ]
-      );
+      const successInfo = formatSuccessMessage(`El workout "${createdWorkout.name}" se ha creado correctamente`);
+      infoModal.openModal({
+        title: '✅ Workout Creado!',
+        message: successInfo.message,
+        icon: successInfo.icon,
+        buttonText: 'Genial!',
+        onClose: () => {
+          infoModal.closeModal();
+          setCreateModalVisible(false);
+          resetCreateForm();
+          loadWorkoutData();
+        }
+      });
 
     } catch (error) {
       console.error('❌ Error creant workout:', error);
       const errorInfo = handleApiError(error);
-      Alert.alert(errorInfo.title, errorInfo.message);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setCreating(false);
     }
@@ -267,16 +294,26 @@ export default function WorkoutScreen({ user }) {
       setCompletedSets([]);
       setModalVisible(true);
 
-      Alert.alert(
-        "🔥 SESSIÓ INICIADA!",
-        `Entrenament: ${workout.name}\nDurada estimada: ${workout.estimated_duration || 30} min\n\n¡A per elles!`,
-        [{ text: "¡DALE!", style: "default" }]
+      const successInfo = formatSuccessMessage(
+        `Entrenamiento: ${workout.name}\nDuración estimada: ${workout.estimated_duration || 30} min\n\n¡A por ellas!`,
+        'success'
       );
+      infoModal.openModal({
+        title: '🔥 SESIÓN INICIADA!',
+        message: successInfo.message,
+        icon: successInfo.icon,
+        buttonText: '¡DALE!',
+        onClose: infoModal.closeModal,
+      });
 
     } catch (error) {
       console.error('❌ Error iniciant workout:', error);
       const errorInfo = handleApiError(error);
-      Alert.alert(errorInfo.title, errorInfo.message);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     }
   };
 
@@ -294,51 +331,63 @@ export default function WorkoutScreen({ user }) {
 
       setCompletionModalVisible(false);
 
-      Alert.alert(
-        "🎉 ENTRENAMIENTO COMPLETADO!",
+      const successInfo = formatSuccessMessage(
         `¡BRUTAL! Has acabado ${selectedWorkout.name}\n\n🔥 +1 hacia tus objetivos\n💪 Progresión registrada\n\n¡Un paso más cerca!`,
-        [
-          {
-            text: "🚀 GENIAL!",
-            onPress: () => {
-              setModalVisible(false);
-              loadWorkoutData();
-            }
-          }
-        ]
+        'success'
       );
+      infoModal.openModal({
+        title: '🎉 ENTRENAMIENTO COMPLETADO!',
+        message: successInfo.message,
+        icon: successInfo.icon,
+        buttonText: '🚀 GENIAL!',
+        onClose: () => {
+          infoModal.closeModal();
+          setModalVisible(false);
+          loadWorkoutData();
+        }
+      });
 
     } catch (error) {
       console.error('❌ Error completando sesión:', error);
       const errorInfo = handleApiError(error);
-      Alert.alert(errorInfo.title, errorInfo.message);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setCompletingSession(false);
     }
   };
 
   const handleAbandonWorkout = () => {
-    Alert.alert(
-      "❌ Abandonar Entrenament",
-      "Segur que vols parar? Estàs tan a prop!",
-      [
-        { text: "Continuar", style: "cancel" },
-        {
-          text: "Abandonar",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await abandonSession(currentSessionId, "Abandonat per l'usuari");
-              setModalVisible(false);
-              Alert.alert("Info", "Sessió abandonada. Torna-ho a intentar aviat!");
-            } catch (error) {
-              console.error('❌ Error abandonant sessió:', error);
-              setModalVisible(false);
-            }
-          }
+    confirmModal.openModal({
+      title: '❌ Abandonar Entrenamiento',
+      message: '¿Seguro que quieres parar? ¡Estás tan cerca!',
+      confirmText: 'Abandonar',
+      cancelText: 'Continuar',
+      variant: 'danger',
+      icon: 'close-circle',
+      onConfirm: async () => {
+        confirmModal.closeModal();
+        try {
+          await abandonSession(currentSessionId, "Abandonado por el usuario");
+          setModalVisible(false);
+
+          const infoMessage = formatSuccessMessage('Sesión abandonada. ¡Vuelve a intentarlo pronto!', 'info');
+          infoModal.openModal({
+            title: 'Información',
+            message: infoMessage.message,
+            icon: infoMessage.icon,
+            onClose: infoModal.closeModal,
+          });
+        } catch (error) {
+          console.error('❌ Error abandonant sessió:', error);
+          setModalVisible(false);
         }
-      ]
-    );
+      },
+      onCancel: confirmModal.closeModal,
+    });
   };
 
   const getDaySchedule = () => {
@@ -507,6 +556,36 @@ export default function WorkoutScreen({ user }) {
             onComplete={handleCompletionSubmit}
             onCancel={() => setCompletionModalVisible(false)}
             loading={completingSession}
+          />
+
+          {/* System Modals */}
+          <ConfirmModal
+            visible={confirmModal.visible}
+            title={confirmModal.modalData.title}
+            message={confirmModal.modalData.message}
+            confirmText={confirmModal.modalData.confirmText}
+            cancelText={confirmModal.modalData.cancelText}
+            variant={confirmModal.modalData.variant}
+            icon={confirmModal.modalData.icon}
+            onConfirm={confirmModal.modalData.onConfirm || confirmModal.closeModal}
+            onCancel={confirmModal.modalData.onCancel || confirmModal.closeModal}
+          />
+          <InfoModal
+            visible={infoModal.visible}
+            title={infoModal.modalData.title}
+            message={infoModal.modalData.message}
+            buttonText={infoModal.modalData.buttonText}
+            variant={infoModal.modalData.variant}
+            icon={infoModal.modalData.icon}
+            onClose={infoModal.modalData.onClose || infoModal.closeModal}
+          />
+          <ErrorModal
+            visible={errorModal.visible}
+            title={errorModal.modalData.title}
+            message={errorModal.modalData.message}
+            buttonText={errorModal.modalData.buttonText}
+            icon={errorModal.modalData.icon}
+            onClose={errorModal.modalData.onClose || errorModal.closeModal}
           />
         </SafeAreaView>
       </ImageBackground>

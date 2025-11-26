@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, ImageBackground, ActivityIndicator, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, ImageBackground, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import ProgressBar from '../components/common/ProgressBar';
 import Header from '../components/common/Header';
 import { getUserStats, getTodayWorkout } from '../services/api';
-import { handleApiError } from '../utils/errorHandler';
+import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
+import ErrorModal from '../components/common/ErrorModal';
+import InfoModal from '../components/common/InfoModal';
+import useModal from '../hooks/useModal';
 
 export default function DashboardScreen({ user }) {
   const [stats, setStats] = useState(null);
   const [todayWorkout, setTodayWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // System modals
+  const errorModal = useModal();
+  const infoModal = useModal();
 
   useEffect(() => {
     loadDashboardData();
@@ -36,7 +43,11 @@ export default function DashboardScreen({ user }) {
     } catch (error) {
       console.error('❌ Error carregant dashboard:', error);
       const errorInfo = handleApiError(error);
-      Alert.alert(errorInfo.title, errorInfo.message);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -237,7 +248,15 @@ export default function DashboardScreen({ user }) {
 
                   <TouchableOpacity
                     style={styles.startButton}
-                    onPress={() => Alert.alert('Workout', 'Navegar a WorkoutScreen per començar!')}
+                    onPress={() => {
+                      const infoMessage = formatSuccessMessage('Navega a WorkoutScreen para comenzar!', 'info');
+                      infoModal.openModal({
+                        title: 'Workout',
+                        message: infoMessage.message,
+                        icon: infoMessage.icon,
+                        onClose: infoModal.closeModal,
+                      });
+                    }}
                   >
                     <Ionicons name="play" size={18} color="white" />
                     <Text style={styles.startButtonText}>COMENÇAR ENTRENO</Text>
@@ -296,6 +315,22 @@ export default function DashboardScreen({ user }) {
               </Text>
             </View>
           </ScrollView>
+
+          {/* System Modals */}
+          <ErrorModal
+            visible={errorModal.visible}
+            title={errorModal.modalData.title}
+            message={errorModal.modalData.message}
+            icon={errorModal.modalData.icon}
+            onClose={errorModal.modalData.onClose || errorModal.closeModal}
+          />
+          <InfoModal
+            visible={infoModal.visible}
+            title={infoModal.modalData.title}
+            message={infoModal.modalData.message}
+            icon={infoModal.modalData.icon}
+            onClose={infoModal.modalData.onClose || infoModal.closeModal}
+          />
         </LinearGradient>
       </ImageBackground>
     </View>
