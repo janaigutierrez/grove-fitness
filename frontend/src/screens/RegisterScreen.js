@@ -140,7 +140,7 @@ export default function RegisterScreen({ navigation, onLogin }) {
     };
 
     return (
-        <LinearGradient colors={['#4CAF50', '#2D5016']} style={{ flex: 1 }}>
+        <LinearGradient colors={[colors.primary, colors.primaryDark]} style={{ flex: 1 }}>
             <SafeAreaView style={{ flex: 1 }}>
                 <ScrollView contentContainerStyle={styles.container}>
                     {/* Header */}
@@ -284,14 +284,14 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     backButtonText: {
-        color: 'white',
+        color: colors.text.inverse,
         fontSize: 16,
         fontWeight: '500',
     },
     title: {
         fontSize: 36,
         fontWeight: 'bold',
-        color: 'white',
+        color: colors.text.inverse,
         marginBottom: 8,
     },
     subtitle: {
@@ -307,14 +307,14 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: 'white',
+        color: colors.text.inverse,
     },
     input: {
         backgroundColor: 'rgba(255,255,255,0.2)',
         borderRadius: 12,
         padding: 16,
         fontSize: 16,
-        color: 'white',
+        color: colors.text.inverse,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.3)',
     },
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
     },
     button: {
-        backgroundColor: 'white',
+        backgroundColor: colors.text.inverse,
         padding: 18,
         borderRadius: 12,
         alignItems: 'center',
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     buttonText: {
-        color: '#2D5016',
+        color: colors.primaryDark,
         fontSize: 18,
         fontWeight: 'bold',
     },
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
         padding: 10,
     },
     linkText: {
-        color: 'white',
+        color: colors.text.inverse,
         fontSize: 16,
         textDecorationLine: 'underline',
     },

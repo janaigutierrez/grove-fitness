@@ -24,6 +24,7 @@ import AIAnalysisModal from '../components/progress/AIAnalysisModal';
 import ErrorModal from '../components/common/ErrorModal';
 import InfoModal from '../components/common/InfoModal';
 import useModal from '../hooks/useModal';
+import colors from '../constants/colors';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -183,7 +184,7 @@ export default function ProgressScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Cargando progreso...</Text>
         </View>
       </SafeAreaView>
@@ -207,7 +208,7 @@ export default function ProgressScreen() {
             style={styles.addWeightBtn}
             onPress={() => setAddWeightModal(true)}
           >
-            <Icon name="add-circle" size={20} color="#fff" />
+            <Icon name="add-circle" size={20} color={colors.text.inverse} />
             <Text style={styles.addWeightText}>Añadir Peso</Text>
           </TouchableOpacity>
         </View>
@@ -215,13 +216,13 @@ export default function ProgressScreen() {
         {/* Stats Cards */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Icon name="barbell" size={24} color="#4CAF50" style={styles.statIcon} />
+            <Icon name="barbell" size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{stats?.total_workouts || 0}</Text>
             <Text style={styles.statLabel}>Entrenamientos</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Icon name="calendar" size={24} color="#4CAF50" style={styles.statIcon} />
+            <Icon name="calendar" size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{stats?.weeks_active || 0}</Text>
             <Text style={styles.statLabel}>Semanas activas</Text>
           </View>
@@ -230,20 +231,20 @@ export default function ProgressScreen() {
             style={[styles.statCard, styles.weightCard]}
             onPress={() => setAddWeightModal(true)}
           >
-            <Icon name="fitness" size={24} color="#4CAF50" style={styles.statIcon} />
+            <Icon name="fitness" size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{currentWeight ? `${currentWeight}kg` : '-'}</Text>
             <Text style={styles.statLabel}>Peso actual</Text>
             <View style={styles.addWeightHint}>
-              <Icon name="add" size={14} color="#4CAF50" />
+              <Icon name="add" size={14} color={colors.primary} />
               <Text style={styles.addWeightHintText}>Tap para añadir</Text>
             </View>
           </TouchableOpacity>
 
           <View style={styles.statCard}>
-            <Icon name="trending-up" size={24} color={weightChange >= 0 ? '#4CAF50' : '#f44336'} style={styles.statIcon} />
+            <Icon name="trending-up" size={24} color={weightChange >= 0 ? colors.primary : colors.danger} style={styles.statIcon} />
             <Text style={[
               styles.statValue,
-              { color: weightChange >= 0 ? '#4CAF50' : '#f44336' }
+              { color: weightChange >= 0 ? colors.primary : colors.danger }
             ]}>
               {weightChange !== null ? `${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)}kg` : '-'}
             </Text>
@@ -258,7 +259,7 @@ export default function ProgressScreen() {
           disabled={analyzingProgress}
         >
           <View style={styles.aiAnalysisLeft}>
-            <Icon name="sparkles" size={32} color="#FF9800" />
+            <Icon name="sparkles" size={32} color={colors.secondary} />
             <View style={styles.aiAnalysisTextContainer}>
               <Text style={styles.aiAnalysisTitle}>Análisis con IA</Text>
               <Text style={styles.aiAnalysisDesc}>
@@ -267,9 +268,9 @@ export default function ProgressScreen() {
             </View>
           </View>
           {analyzingProgress ? (
-            <ActivityIndicator color="#FF9800" />
+            <ActivityIndicator color={colors.secondary} />
           ) : (
-            <Icon name="arrow-forward-circle" size={28} color="#FF9800" />
+            <Icon name="arrow-forward-circle" size={28} color={colors.secondary} />
           )}
         </TouchableOpacity>
 
@@ -282,9 +283,9 @@ export default function ProgressScreen() {
               width={screenWidth - 40}
               height={220}
               chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
+                backgroundColor: colors.text.inverse,
+                backgroundGradientFrom: colors.text.inverse,
+                backgroundGradientTo: colors.text.inverse,
                 decimalPlaces: 1,
                 color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
@@ -294,7 +295,7 @@ export default function ProgressScreen() {
                 propsForDots: {
                   r: '4',
                   strokeWidth: '2',
-                  stroke: '#4CAF50'
+                  stroke: colors.primary
                 }
               }}
               bezier
@@ -303,7 +304,7 @@ export default function ProgressScreen() {
           </View>
         ) : (
           <View style={styles.emptyChartContainer}>
-            <Icon name="stats-chart-outline" size={48} color="#ccc" />
+            <Icon name="stats-chart-outline" size={48} color={colors.text.disabled} />
             <Text style={styles.emptyText}>No hay datos de peso</Text>
             <Text style={styles.emptySubtext}>Añade tu primer registro de peso</Text>
             <TouchableOpacity
@@ -331,7 +332,7 @@ export default function ProgressScreen() {
               return (
                 <View key={session._id || index} style={styles.activityItem}>
                   <View style={styles.activityIcon}>
-                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
+                    <Icon name="checkmark-circle" size={24} color={colors.primary} />
                   </View>
                   <View style={styles.activityContent}>
                     <Text style={styles.activityTitle}>{session.workout_id?.name || 'Entrenamiento'}</Text>
@@ -353,7 +354,7 @@ export default function ProgressScreen() {
             })
           ) : (
             <View style={styles.emptyActivity}>
-              <Icon name="barbell-outline" size={32} color="#ccc" />
+              <Icon name="barbell-outline" size={32} color={colors.text.disabled} />
               <Text style={styles.emptyActivityText}>No hay entrenamientos completados</Text>
             </View>
           )}
@@ -384,7 +385,7 @@ export default function ProgressScreen() {
                     {change !== null && (
                       <Text style={[
                         styles.weightItemChange,
-                        { color: change >= 0 ? '#4CAF50' : '#f44336' }
+                        { color: change >= 0 ? colors.primary : colors.danger }
                       ]}>
                         {change > 0 ? '+' : ''}{change.toFixed(1)}
                       </Text>
@@ -439,7 +440,7 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
   },
   loadingContainer: {
     flex: 1,
@@ -449,7 +450,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
   },
   header: {
     flexDirection: 'row',
@@ -461,25 +462,25 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   addWeightBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 6,
   },
   addWeightText: {
-    color: '#fff',
+    color: colors.text.inverse,
     fontWeight: '600',
     fontSize: 14,
   },
   weightCard: {
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: colors.primary,
     borderStyle: 'dashed',
   },
   addWeightHint: {
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
   },
   addWeightHintText: {
     fontSize: 11,
-    color: '#4CAF50',
+    color: colors.primary,
     fontWeight: '600',
   },
   statsGrid: {
@@ -519,12 +520,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 5,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: colors.text.secondary,
     textAlign: 'center',
   },
   chartContainer: {
@@ -542,7 +543,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 15,
   },
   chart: {
@@ -565,7 +566,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.text.secondary,
     marginTop: 15,
   },
   emptySubtext: {
@@ -575,7 +576,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
@@ -626,7 +627,7 @@ const styles = StyleSheet.create({
   activityVolume: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: colors.primary,
   },
   activityVolumeLabel: {
     fontSize: 11,
@@ -666,7 +667,7 @@ const styles = StyleSheet.create({
   },
   weightItemDate: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
   },
   weightItemRight: {
     flexDirection: 'row',
@@ -697,7 +698,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
+    borderLeftColor: colors.secondary,
   },
   aiAnalysisLeft: {
     flexDirection: 'row',
@@ -711,11 +712,11 @@ const styles = StyleSheet.create({
   aiAnalysisTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 4,
   },
   aiAnalysisDesc: {
     fontSize: 13,
-    color: '#666',
+    color: colors.text.secondary,
   },
 });
