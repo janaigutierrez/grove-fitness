@@ -59,7 +59,6 @@ export default function WeeklyScheduleScreen({ navigation }) {
       setSchedule(scheduleData.weekly_schedule || {});
       setWorkouts(workoutsData.workouts || []);
     } catch (error) {
-      console.error('Error loading schedule:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
@@ -137,7 +136,6 @@ export default function WeeklyScheduleScreen({ navigation }) {
         onClose: infoModal.closeModal,
       });
     } catch (error) {
-      console.error('Error saving schedule:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,

@@ -34,14 +34,11 @@ export default function DashboardScreen({ user }) {
         getTodayWorkout()
       ]);
 
-      console.log('✅ Stats carregades:', statsData);
-      console.log('✅ Workout d\'avui:', todayData);
 
       setStats(statsData);
       setTodayWorkout(todayData);
 
     } catch (error) {
-      console.error('❌ Error carregant dashboard:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,

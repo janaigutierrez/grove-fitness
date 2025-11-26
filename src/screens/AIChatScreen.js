@@ -51,7 +51,6 @@ export default function AIChatScreen() {
       const userData = await getCurrentUser();
       setUser(userData);
     } catch (error) {
-      console.error('Error loading user:', error);
     }
   };
 
@@ -86,7 +85,6 @@ export default function AIChatScreen() {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch (error) {
-      console.error('Error sending message:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
@@ -118,7 +116,6 @@ export default function AIChatScreen() {
       // Recargar usuario para asegurar que esté sincronizado
       await loadUser();
     } catch (error) {
-      console.error('Error changing personality:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: 'Error',

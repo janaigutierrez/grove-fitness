@@ -63,7 +63,6 @@ export default function ProgressScreen() {
       setStats(statsData);
       setRecentSessions(sessionsData.sessions || []);
     } catch (error) {
-      console.error('Error loading progress data:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
@@ -108,7 +107,6 @@ export default function ProgressScreen() {
         icon: successInfo.icon,
       });
     } catch (error) {
-      console.error('Error adding weight:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
@@ -127,7 +125,6 @@ export default function ProgressScreen() {
       setAiAnalysis(analysis);
       setAiAnalysisModal(true);
     } catch (error) {
-      console.error('Error analyzing progress:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,

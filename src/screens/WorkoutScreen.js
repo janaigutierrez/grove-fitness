@@ -82,14 +82,11 @@ export default function WorkoutScreen({ user }) {
         getWeeklySchedule()
       ]);
 
-      console.log('✅ Workouts carregats:', workoutsData);
-      console.log('✅ Schedule carregat:', scheduleData);
 
       setWorkouts(workoutsData);
       setWeekSchedule(scheduleData);
 
     } catch (error) {
-      console.error('❌ Error carregant workouts:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
@@ -111,10 +108,8 @@ export default function WorkoutScreen({ user }) {
   const loadAvailableExercises = async () => {
     try {
       const exercises = await getExercises();
-      console.log('✅ Exercicis carregats:', exercises.length);
       setAvailableExercises(exercises);
     } catch (error) {
-      console.error('❌ Error carregant exercicis:', error);
       // No mostrem error, simplement no hi haurà exercicis predefinits
     }
   };
@@ -170,7 +165,6 @@ export default function WorkoutScreen({ user }) {
           exerciseId = ex.exercise_id;
         } else if (ex.newExercise) {
           // Crear nou exercici
-          console.log('📝 Creant nou exercici:', ex.newExercise);
 
           const newEx = await createExercise({
             name: ex.newExercise.name.trim(),
@@ -182,7 +176,6 @@ export default function WorkoutScreen({ user }) {
           });
 
           exerciseId = newEx.id;
-          console.log('✅ Exercici creat:', newEx.id);
         } else {
           // Buscar per nom (fallback)
           const found = availableExercises.find(e =>
@@ -223,7 +216,6 @@ export default function WorkoutScreen({ user }) {
         is_template: true
       };
 
-      console.log('📝 Creant workout:', workoutData);
       const createdWorkout = await createWorkout(workoutData);
 
       const successInfo = formatSuccessMessage(`El workout "${createdWorkout.name}" se ha creado correctamente`);
@@ -241,7 +233,6 @@ export default function WorkoutScreen({ user }) {
       });
 
     } catch (error) {
-      console.error('❌ Error creant workout:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
@@ -284,10 +275,8 @@ export default function WorkoutScreen({ user }) {
 
   const startWorkout = async (workout) => {
     try {
-      console.log('🏋️ Iniciant workout:', workout.name);
 
       const session = await startWorkoutSession(workout.id);
-      console.log('✅ Sessió creada:', session);
 
       setCurrentSessionId(session.id);
       setSelectedWorkout(workout);
@@ -307,7 +296,6 @@ export default function WorkoutScreen({ user }) {
       });
 
     } catch (error) {
-      console.error('❌ Error iniciant workout:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
@@ -348,7 +336,6 @@ export default function WorkoutScreen({ user }) {
       });
 
     } catch (error) {
-      console.error('❌ Error completando sesión:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
@@ -382,7 +369,6 @@ export default function WorkoutScreen({ user }) {
             onClose: infoModal.closeModal,
           });
         } catch (error) {
-          console.error('❌ Error abandonant sessió:', error);
           setModalVisible(false);
         }
       },

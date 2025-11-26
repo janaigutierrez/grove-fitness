@@ -82,7 +82,6 @@ export default function ProfileScreen({ navigation, onLogout }) {
       });
       setNewUsername(userData.username || '');
     } catch (error) {
-      console.error('Error loading user data:', error);
       errorModal.openModal({
         message: 'No se pudo cargar el perfil',
       });
@@ -128,7 +127,6 @@ export default function ProfileScreen({ navigation, onLogout }) {
       }
     } catch (error) {
       setLoading(false);
-      console.error('Error uploading avatar:', error);
       errorModal.openModal({
         message: error.message || 'No se pudo subir el avatar',
       });
@@ -154,7 +152,6 @@ export default function ProfileScreen({ navigation, onLogout }) {
           });
         } catch (error) {
           setLoading(false);
-          console.error('Error deleting avatar:', error);
           errorModal.openModal({
             message: 'No se pudo eliminar el avatar',
           });
@@ -182,7 +179,6 @@ export default function ProfileScreen({ navigation, onLogout }) {
         message: 'Perfil actualizado',
       });
     } catch (error) {
-      console.error('Error updating profile:', error);
       errorModal.openModal({
         message: error.message || 'No se pudo actualizar el perfil',
       });
@@ -209,7 +205,6 @@ export default function ProfileScreen({ navigation, onLogout }) {
         message: 'Nombre de usuario actualizado',
       });
     } catch (error) {
-      console.error('Error changing username:', error);
       errorModal.openModal({
         message: error.message || 'No se pudo cambiar el nombre de usuario',
       });
@@ -252,7 +247,6 @@ export default function ProfileScreen({ navigation, onLogout }) {
         onClose: handleLogout,
       });
     } catch (error) {
-      console.error('Error changing password:', error);
       errorModal.openModal({
         message: error.message || 'No se pudo cambiar la contraseña',
       });
@@ -273,7 +267,6 @@ export default function ProfileScreen({ navigation, onLogout }) {
           await logout();
           if (onLogout) onLogout();
         } catch (error) {
-          console.error('Error logging out:', error);
         }
       },
     });
