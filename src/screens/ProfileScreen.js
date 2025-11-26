@@ -487,7 +487,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
   },
   loadingContainer: {
     flex: 1,
@@ -497,12 +497,12 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
   },
   header: {
     alignItems: 'center',
     padding: 30,
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     marginBottom: 20,
   },
   avatarContainer: {
@@ -518,27 +518,27 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInitials: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
   },
   avatarEditBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: 'white',
+    borderColor: colors.text.inverse,
   },
   deleteAvatarBtn: {
     marginTop: 8,
@@ -551,18 +551,18 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 5,
   },
   username: {
     fontSize: 16,
-    color: '#4CAF50',
+    color: colors.primary,
     fontWeight: '600',
     marginBottom: 3,
   },
   email: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   statCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     width: '48%',
     padding: 20,
     borderRadius: 10,
@@ -587,15 +587,15 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 5,
   },
   statLabel: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
   },
   infoSection: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     marginHorizontal: 20,
     padding: 20,
     borderRadius: 10,
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 15,
   },
   infoRow: {
@@ -621,13 +621,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
     marginLeft: 10,
     flex: 1,
   },
   infoValue: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text.primary,
     fontWeight: '600',
   },
   actionsContainer: {

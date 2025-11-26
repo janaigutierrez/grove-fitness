@@ -409,10 +409,10 @@ export default function WorkoutScreen({ user }) {
 
   if (loading) {
     return (
-      <LinearGradient colors={['#4CAF50', '#2D5016']} style={{ flex: 1 }}>
+      <LinearGradient colors={[colors.primary, colors.primaryDark]} style={{ flex: 1 }}>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="white" />
-          <Text style={{ color: 'white', marginTop: 10 }}>Carregant workouts...</Text>
+          <Text style={{ color: colors.text.inverse, marginTop: 10 }}>Carregant workouts...</Text>
         </SafeAreaView>
       </LinearGradient>
     );
@@ -431,7 +431,7 @@ export default function WorkoutScreen({ user }) {
   }
 
   return (
-    <LinearGradient colors={['#4CAF50', '#2D5016']} style={{ flex: 1 }}>
+    <LinearGradient colors={[colors.primary, colors.primaryDark]} style={{ flex: 1 }}>
       <ImageBackground
         source={{ uri: 'https://www.transparenttextures.com/patterns/green-fibers.png' }}
         style={styles.bg}
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     marginBottom: 5,
     marginTop: 10,
   },
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
   weekTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     marginBottom: 15,
   },
   weekGrid: {
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     borderColor: '#FFD700',
   },
   dayText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontWeight: 'bold',
     fontSize: 12,
     marginBottom: 4,
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     marginBottom: 15,
   },
   noWorkouts: {
@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
   noWorkoutsText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     marginTop: 15,
     marginBottom: 5,
   },
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 30,
     right: 30,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -700,6 +700,6 @@ const styles = StyleSheet.create({
   },
   fabButtonSecondary: {
     bottom: 100,
-    backgroundColor: '#FF9800',
+    backgroundColor: colors.secondary,
   },
 });

@@ -142,7 +142,7 @@ export default function DashboardScreen({ user }) {
           style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}
         >
           <ActivityIndicator size="large" color="white" />
-          <Text style={{ color: 'white', marginTop: 10 }}>Carregant dashboard...</Text>
+          <Text style={{ color: colors.text.inverse, marginTop: 10 }}>Carregant dashboard...</Text>
         </LinearGradient>
       </View>
     );
@@ -171,7 +171,7 @@ export default function DashboardScreen({ user }) {
                 refreshing={refreshing}
                 onRefresh={onRefresh}
                 tintColor="white"
-                colors={['white']}
+                colors={[colors.text.inverse]}
               />
             }
           >
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: 'white',
+    borderColor: colors.text.inverse,
     marginBottom: 15,
   },
   avatarPlaceholder: {
@@ -368,12 +368,12 @@ const styles = StyleSheet.create({
   avatarInitials: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
   },
   username: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
   },
   level: {
     fontSize: 14,
@@ -403,12 +403,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.inverse,
     marginBottom: 12,
   },
   sectionText: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.text.inverse,
     marginBottom: 4,
     lineHeight: 20,
   },
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   todayWorkoutTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     marginLeft: 10,
   },
   todayWorkoutDetail: {
@@ -457,14 +457,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 12,
     marginTop: 15,
   },
   startButtonText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontWeight: 'bold',
     fontSize: 14,
     marginLeft: 8,
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
   sessionName: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'white',
+    color: colors.text.inverse,
     marginBottom: 4,
   },
   sessionDate: {

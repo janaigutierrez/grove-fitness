@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 48,
         fontWeight: 'bold',
-        color: 'white',
+        color: colors.text.inverse,
         marginBottom: 10,
     },
     subtitle: {
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     },
     feature: {
         fontSize: 16,
-        color: 'white',
+        color: colors.text.inverse,
         fontWeight: '500',
     },
     buttons: {
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     primaryButton: {
-        backgroundColor: 'white',
+        backgroundColor: colors.text.inverse,
         padding: 18,
         borderRadius: 12,
         alignItems: 'center',
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     primaryButtonText: {
-        color: '#2D5016',
+        color: colors.primaryDark,
         fontSize: 18,
         fontWeight: 'bold',
     },
@@ -119,10 +119,10 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: 'white',
+        borderColor: colors.text.inverse,
     },
     secondaryButtonText: {
-        color: 'white',
+        color: colors.text.inverse,
         fontSize: 18,
         fontWeight: 'bold',
     },

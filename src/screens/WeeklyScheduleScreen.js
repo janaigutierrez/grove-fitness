@@ -175,7 +175,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
           <Icon
             name={day.icon}
             size={24}
-            color={hasWorkout ? (isRestDay ? '#999' : '#4CAF50') : '#ccc'}
+            color={hasWorkout ? (isRestDay ? colors.text.tertiary : colors.primary) : colors.text.disabled}
           />
           <Text style={[
             styles.dayLabel,
@@ -224,7 +224,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.main }}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -283,7 +283,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
                 style={styles.workoutOption}
                 onPress={() => handleSetRestDay(selectedDay)}
               >
-                <View style={[styles.workoutIconContainer, { backgroundColor: '#999' }]}>
+                <View style={[styles.workoutIconContainer, { backgroundColor: colors.text.tertiary }]}>
                   <Icon name="bed" size={24} color="white" />
                 </View>
                 <View style={styles.workoutOptionContent}>
@@ -361,7 +361,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
   },
   loadingContainer: {
     flex: 1,
@@ -371,21 +371,21 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   infoCard: {
     flexDirection: 'row',
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   scrollContainer: {
     flex: 1,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   dayCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -422,10 +422,10 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   dayCardActive: {
-    borderColor: '#4CAF50',
+    borderColor: colors.primary,
   },
   dayCardRest: {
-    borderColor: '#999',
+    borderColor: colors.text.tertiary,
     backgroundColor: '#f9f9f9',
   },
   dayHeader: {
@@ -437,10 +437,10 @@ const styles = StyleSheet.create({
   dayLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#999',
+    color: colors.text.tertiary,
   },
   dayLabelActive: {
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   workoutInfo: {
     flexDirection: 'row',
@@ -450,11 +450,11 @@ const styles = StyleSheet.create({
   workoutName: {
     flex: 1,
     fontSize: 16,
-    color: '#4CAF50',
+    color: colors.primary,
     fontWeight: '600',
   },
   workoutNameRest: {
-    color: '#999',
+    color: colors.text.tertiary,
     fontStyle: 'italic',
   },
   removeBtn: {
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.text.tertiary,
     fontStyle: 'italic',
   },
   savingIndicator: {
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: 20,
     right: 20,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -484,17 +484,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   savingText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontSize: 14,
     fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.background.overlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   workoutList: {
     padding: 20,
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 15,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
     borderRadius: 10,
     marginBottom: 10,
   },
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -539,12 +539,12 @@ const styles = StyleSheet.create({
   workoutOptionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text.primary,
     marginBottom: 3,
   },
   workoutOptionDesc: {
     fontSize: 13,
-    color: '#666',
+    color: colors.text.secondary,
   },
   emptyWorkouts: {
     alignItems: 'center',
@@ -553,12 +553,12 @@ const styles = StyleSheet.create({
   emptyWorkoutsText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#999',
+    color: colors.text.tertiary,
     marginTop: 15,
   },
   emptyWorkoutsSubtext: {
     fontSize: 14,
-    color: '#ccc',
+    color: colors.text.disabled,
     marginTop: 5,
   },
 });

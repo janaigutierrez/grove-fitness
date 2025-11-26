@@ -223,7 +223,7 @@ export default function OnboardingScreen({ route, onComplete }) {
           <Icon
             name={option.icon}
             size={28}
-            color={selected ? '#4CAF50' : '#666'}
+            color={selected ? colors.primary : colors.text.secondary}
             style={styles.optionIcon}
           />
         )}
@@ -243,7 +243,7 @@ export default function OnboardingScreen({ route, onComplete }) {
   };
 
   return (
-    <LinearGradient colors={['#4CAF50', '#2D5016']} style={{ flex: 1 }}>
+    <LinearGradient colors={[colors.primary, colors.primaryDark]} style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Progress Bar */}
@@ -346,18 +346,18 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: colors.overlay.white30,
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderRadius: 2,
   },
   progressText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontSize: 12,
     textAlign: 'right',
     opacity: 0.9,
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -398,8 +398,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   optionCardSelected: {
-    backgroundColor: 'white',
-    borderColor: '#4CAF50',
+    backgroundColor: colors.text.inverse,
+    borderColor: colors.primary,
   },
   optionIcon: {
     marginRight: 12,
@@ -410,14 +410,14 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text.primary,
   },
   optionLabelSelected: {
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   optionDesc: {
     fontSize: 12,
-    color: '#666',
+    color: colors.text.secondary,
     marginTop: 2,
   },
   buttonsContainer: {
@@ -429,14 +429,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: colors.overlay.white20,
     padding: 16,
     borderRadius: 12,
     flex: 1,
     gap: 8,
   },
   backButtonText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     padding: 16,
     borderRadius: 12,
     flex: 2,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   nextButtonText: {
-    color: '#2D5016',
+    color: colors.primaryDark,
     fontSize: 16,
     fontWeight: 'bold',
   },
