@@ -6,21 +6,32 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Alert,
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { login } from '../services/api';
+import { handleApiError, ValidationError } from '../utils/errorHandler';
+import ErrorModal from '../components/common/ErrorModal';
+import useModal from '../hooks/useModal';
 
 export default function LoginScreen({ navigation, onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // System modals
+    const errorModal = useModal();
+
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Si us plau, omple tots els camps');
+            const validationError = new ValidationError('Por favor, completa todos los campos');
+            const errorInfo = handleApiError(validationError);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message,
+                icon: errorInfo.icon,
+            });
             return;
         }
 
@@ -32,10 +43,20 @@ export default function LoginScreen({ navigation, onLogin }) {
             if (response.accessToken && response.user) {
                 onLogin(response.accessToken, response.user);
             } else {
-                Alert.alert('Error', 'Resposta inesperada del servidor');
+                const errorInfo = handleApiError(new Error('Respuesta inesperada del servidor'));
+                errorModal.openModal({
+                    title: errorInfo.title,
+                    message: errorInfo.message,
+                    icon: errorInfo.icon,
+                });
             }
         } catch (error) {
-            Alert.alert('Error', error.message || 'Error al iniciar sessió');
+            const errorInfo = handleApiError(error);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message || 'Error al iniciar sesión',
+                icon: errorInfo.icon,
+            });
         } finally {
             setLoading(false);
         }
@@ -102,6 +123,15 @@ export default function LoginScreen({ navigation, onLogin }) {
                         <Text style={styles.linkText}>No tens compte? Registra't</Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* System Modals */}
+                <ErrorModal
+                    visible={errorModal.visible}
+                    title={errorModal.modalData.title}
+                    message={errorModal.modalData.message}
+                    icon={errorModal.modalData.icon}
+                    onClose={errorModal.modalData.onClose || errorModal.closeModal}
+                />
             </SafeAreaView>
         </LinearGradient>
     );

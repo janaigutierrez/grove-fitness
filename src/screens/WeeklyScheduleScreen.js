@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,11 @@ import {
   updateWeeklySchedule,
   getWorkouts
 } from '../services/api';
+import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
+import ConfirmModal from '../components/common/ConfirmModal';
+import InfoModal from '../components/common/InfoModal';
+import ErrorModal from '../components/common/ErrorModal';
+import useModal from '../hooks/useModal';
 
 const DAYS_OF_WEEK = [
   { key: 'monday', label: 'Lunes', icon: 'moon' },
@@ -35,6 +39,11 @@ export default function WeeklyScheduleScreen({ navigation }) {
   const [selectedDay, setSelectedDay] = useState(null);
   const [workoutPickerVisible, setWorkoutPickerVisible] = useState(false);
 
+  // System modals
+  const confirmModal = useModal();
+  const infoModal = useModal();
+  const errorModal = useModal();
+
   useEffect(() => {
     loadData();
   }, []);
@@ -51,7 +60,12 @@ export default function WeeklyScheduleScreen({ navigation }) {
       setWorkouts(workoutsData.workouts || []);
     } catch (error) {
       console.error('Error loading schedule:', error);
-      Alert.alert('Error', 'No se pudo cargar el schedule');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: 'No se pudo cargar el schedule',
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
     }
@@ -79,23 +93,22 @@ export default function WeeklyScheduleScreen({ navigation }) {
   };
 
   const handleRemoveWorkout = async (dayKey) => {
-    Alert.alert(
-      'Eliminar entrenamiento',
-      '¿Estás seguro de que quieres eliminar este entrenamiento del día?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            const newSchedule = { ...schedule };
-            delete newSchedule[dayKey];
-            setSchedule(newSchedule);
-            await saveSchedule(newSchedule);
-          }
-        }
-      ]
-    );
+    confirmModal.openModal({
+      title: 'Eliminar entrenamiento',
+      message: '¿Estás seguro de que quieres eliminar este entrenamiento del día?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      icon: 'trash',
+      onConfirm: async () => {
+        confirmModal.closeModal();
+        const newSchedule = { ...schedule };
+        delete newSchedule[dayKey];
+        setSchedule(newSchedule);
+        await saveSchedule(newSchedule);
+      },
+      onCancel: confirmModal.closeModal,
+    });
   };
 
   const handleSetRestDay = async (dayKey) => {
@@ -115,10 +128,22 @@ export default function WeeklyScheduleScreen({ navigation }) {
     try {
       setSaving(true);
       await updateWeeklySchedule({ weekly_schedule: newSchedule });
-      Alert.alert('Éxito', 'Schedule actualizado');
+
+      const successInfo = formatSuccessMessage('Schedule actualizado', 'success');
+      infoModal.openModal({
+        title: successInfo.title,
+        message: successInfo.message,
+        icon: successInfo.icon,
+        onClose: infoModal.closeModal,
+      });
     } catch (error) {
       console.error('Error saving schedule:', error);
-      Alert.alert('Error', 'No se pudo guardar el schedule');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: 'No se pudo guardar el schedule',
+        icon: errorInfo.icon,
+      });
     } finally {
       setSaving(false);
     }
@@ -302,6 +327,33 @@ export default function WeeklyScheduleScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* System Modals */}
+      <ConfirmModal
+        visible={confirmModal.visible}
+        title={confirmModal.modalData.title}
+        message={confirmModal.modalData.message}
+        confirmText={confirmModal.modalData.confirmText}
+        cancelText={confirmModal.modalData.cancelText}
+        variant={confirmModal.modalData.variant}
+        icon={confirmModal.modalData.icon}
+        onConfirm={confirmModal.modalData.onConfirm || confirmModal.closeModal}
+        onCancel={confirmModal.modalData.onCancel || confirmModal.closeModal}
+      />
+      <InfoModal
+        visible={infoModal.visible}
+        title={infoModal.modalData.title}
+        message={infoModal.modalData.message}
+        icon={infoModal.modalData.icon}
+        onClose={infoModal.modalData.onClose || infoModal.closeModal}
+      />
+      <ErrorModal
+        visible={errorModal.visible}
+        title={errorModal.modalData.title}
+        message={errorModal.modalData.message}
+        icon={errorModal.modalData.icon}
+        onClose={errorModal.modalData.onClose || errorModal.closeModal}
+      />
     </SafeAreaView>
   );
 }
