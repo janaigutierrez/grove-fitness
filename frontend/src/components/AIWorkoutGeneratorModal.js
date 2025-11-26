@@ -7,16 +7,23 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { generateAIWorkout } from '../services/api';
+import { handleApiError, ValidationError, formatSuccessMessage } from '../utils/errorHandler';
+import ErrorModal from './common/ErrorModal';
+import InfoModal from './common/InfoModal';
+import useModal from '../hooks/useModal';
 
 export default function AIWorkoutGeneratorModal({ visible, onClose, onWorkoutGenerated }) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [saveToLibrary, setSaveToLibrary] = useState(true);
+
+  // System modals
+  const errorModal = useModal();
+  const infoModal = useModal();
 
   const quickPrompts = [
     {
@@ -47,7 +54,13 @@ export default function AIWorkoutGeneratorModal({ visible, onClose, onWorkoutGen
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
-      Alert.alert('Error', 'Por favor escribe qué tipo de entrenamiento quieres');
+      const validationError = new ValidationError('Por favor escribe qué tipo de entrenamiento quieres');
+      const errorInfo = handleApiError(validationError);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
       return;
     }
 
@@ -56,26 +69,30 @@ export default function AIWorkoutGeneratorModal({ visible, onClose, onWorkoutGen
       const response = await generateAIWorkout(prompt.trim(), saveToLibrary);
 
       if (response.workout) {
-        Alert.alert(
-          '¡Workout Generado! 🎉',
-          `Se ha creado "${response.workout.name}"`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setPrompt('');
-                onClose();
-                if (onWorkoutGenerated) {
-                  onWorkoutGenerated(response.workout);
-                }
-              }
+        const successInfo = formatSuccessMessage(`Se ha creado "${response.workout.name}"`, 'success');
+        infoModal.openModal({
+          title: '¡Workout Generado! 🎉',
+          message: successInfo.message,
+          icon: successInfo.icon,
+          buttonText: 'OK',
+          onClose: () => {
+            infoModal.closeModal();
+            setPrompt('');
+            onClose();
+            if (onWorkoutGenerated) {
+              onWorkoutGenerated(response.workout);
             }
-          ]
-        );
+          }
+        });
       }
     } catch (error) {
       console.error('Error generating workout:', error);
-      Alert.alert('Error', error.message || 'No se pudo generar el workout');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message || 'No se pudo generar el workout',
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
     }
@@ -202,6 +219,23 @@ export default function AIWorkoutGeneratorModal({ visible, onClose, onWorkoutGen
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* System Modals */}
+        <ErrorModal
+          visible={errorModal.visible}
+          title={errorModal.modalData.title}
+          message={errorModal.modalData.message}
+          icon={errorModal.modalData.icon}
+          onClose={errorModal.modalData.onClose || errorModal.closeModal}
+        />
+        <InfoModal
+          visible={infoModal.visible}
+          title={infoModal.modalData.title}
+          message={infoModal.modalData.message}
+          buttonText={infoModal.modalData.buttonText}
+          icon={infoModal.modalData.icon}
+          onClose={infoModal.modalData.onClose || infoModal.closeModal}
+        />
       </View>
     </Modal>
   );
