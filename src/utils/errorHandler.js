@@ -1,6 +1,4 @@
-import { Alert } from 'react-native';
-
-// Classe d'error personalitzada per API
+// Custom API Error class
 export class ApiError extends Error {
     constructor(message, statusCode, errors = null) {
         super(message);
@@ -10,77 +8,118 @@ export class ApiError extends Error {
     }
 }
 
-// Funció per manejar errors i retornar info formatada
-export const handleApiError = (error) => {
-    console.error('🔴 Error capturat:', error);
+// Validation Error class
+export class ValidationError extends Error {
+    constructor(message, field = null) {
+        super(message);
+        this.field = field;
+        this.name = 'ValidationError';
+    }
+}
 
-    // Error de xarxa (no hi ha connexió)
+// Centralized error handler - returns formatted error info
+export const handleApiError = (error) => {
+    console.error('🔴 Error captured:', error);
+
+    // Network error (no connection)
     if (error.message === 'Network request failed' || error.message.includes('fetch')) {
         return {
-            title: 'Error de connexió',
-            message: 'No es pot connectar amb el servidor. Comprova la teva connexió a internet.',
-            type: 'network'
+            title: 'Error de conexión',
+            message: 'No se puede conectar con el servidor. Comprueba tu conexión a internet.',
+            type: 'network',
+            icon: 'cloud-offline'
         };
     }
 
-    // Error de API amb resposta
+    // API error with response
     if (error instanceof ApiError) {
         switch (error.statusCode) {
             case 400:
                 return {
-                    title: 'Dades incorrectes',
-                    message: error.message || 'Les dades enviades no són vàlides',
-                    type: 'validation'
+                    title: 'Datos incorrectos',
+                    message: error.message || 'Los datos enviados no son válidos',
+                    type: 'validation',
+                    icon: 'alert-circle'
                 };
             case 401:
                 return {
-                    title: 'Sessió expirada',
-                    message: 'La teva sessió ha expirat. Si us plau, torna a iniciar sessió.',
-                    type: 'auth'
+                    title: 'Sesión expirada',
+                    message: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+                    type: 'auth',
+                    icon: 'lock-closed'
                 };
             case 403:
                 return {
-                    title: 'Accés denegat',
-                    message: 'No tens permís per realitzar aquesta acció',
-                    type: 'forbidden'
+                    title: 'Acceso denegado',
+                    message: 'No tienes permiso para realizar esta acción',
+                    type: 'forbidden',
+                    icon: 'ban'
                 };
             case 404:
                 return {
-                    title: 'No trobat',
-                    message: error.message || 'El recurs sol·licitat no existeix',
-                    type: 'notfound'
+                    title: 'No encontrado',
+                    message: error.message || 'El recurso solicitado no existe',
+                    type: 'notfound',
+                    icon: 'search'
                 };
             case 409:
                 return {
-                    title: 'Conflicte',
-                    message: error.message || 'Aquest recurs ja existeix',
-                    type: 'conflict'
+                    title: 'Conflicto',
+                    message: error.message || 'Este recurso ya existe',
+                    type: 'conflict',
+                    icon: 'alert-circle'
                 };
             case 500:
             default:
                 return {
                     title: 'Error del servidor',
-                    message: 'Hi ha hagut un error al servidor. Torna-ho a intentar més tard.',
-                    type: 'server'
+                    message: 'Ha habido un error en el servidor. Inténtalo más tarde.',
+                    type: 'server',
+                    icon: 'server'
                 };
         }
     }
 
-    // Error genèric
+    // Validation error
+    if (error instanceof ValidationError) {
+        return {
+            title: 'Error de validación',
+            message: error.message,
+            type: 'validation',
+            field: error.field,
+            icon: 'alert-circle'
+        };
+    }
+
+    // Generic error
     return {
         title: 'Error',
-        message: error.message || 'Ha ocorregut un error inesperat',
-        type: 'generic'
+        message: error.message || 'Ha ocurrido un error inesperado',
+        type: 'generic',
+        icon: 'close-circle'
     };
 };
 
-// Hook opcional per usar en components
-export const useErrorHandler = () => {
-    const showError = (error) => {
-        const errorInfo = handleApiError(error);
-        Alert.alert(errorInfo.title, errorInfo.message);
-        return errorInfo;
+// Success message formatter
+export const formatSuccessMessage = (message, type = 'success') => {
+    const config = {
+        success: {
+            title: 'Éxito',
+            icon: 'checkmark-circle',
+        },
+        info: {
+            title: 'Información',
+            icon: 'information-circle',
+        },
+        warning: {
+            title: 'Aviso',
+            icon: 'alert-circle',
+        },
     };
 
-    return { showError };
+    return {
+        title: config[type]?.title || 'Éxito',
+        message,
+        icon: config[type]?.icon || 'checkmark-circle',
+    };
 };

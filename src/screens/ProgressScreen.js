@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Dimensions
 } from 'react-native';
@@ -19,8 +18,12 @@ import {
   getWorkoutSessions,
   analyzeProgress
 } from '../services/api';
+import { handleApiError, formatSuccessMessage, ValidationError } from '../utils/errorHandler';
 import AddWeightModal from '../components/progress/AddWeightModal';
 import AIAnalysisModal from '../components/progress/AIAnalysisModal';
+import ErrorModal from '../components/common/ErrorModal';
+import InfoModal from '../components/common/InfoModal';
+import useModal from '../hooks/useModal';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -37,6 +40,10 @@ export default function ProgressScreen() {
   const [aiAnalysisModal, setAiAnalysisModal] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [analyzingProgress, setAnalyzingProgress] = useState(false);
+
+  // System modals
+  const errorModal = useModal();
+  const infoModal = useModal();
 
   useEffect(() => {
     loadProgressData();
@@ -56,7 +63,12 @@ export default function ProgressScreen() {
       setRecentSessions(sessionsData.sessions || []);
     } catch (error) {
       console.error('Error loading progress data:', error);
-      Alert.alert('Error', 'No se pudo cargar el progreso');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
     }
@@ -72,7 +84,13 @@ export default function ProgressScreen() {
     const weight = parseFloat(newWeight);
 
     if (isNaN(weight) || weight <= 0 || weight > 500) {
-      Alert.alert('Error', 'Por favor ingresa un peso válido');
+      const validationError = new ValidationError('Por favor ingresa un peso válido (0-500 kg)', 'weight');
+      const errorInfo = handleApiError(validationError);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
       return;
     }
 
@@ -82,10 +100,20 @@ export default function ProgressScreen() {
       await loadProgressData();
       setAddWeightModal(false);
       setNewWeight('');
-      Alert.alert('Éxito', 'Peso registrado correctamente');
+      const successInfo = formatSuccessMessage('Peso registrado correctamente');
+      infoModal.openModal({
+        title: successInfo.title,
+        message: successInfo.message,
+        icon: successInfo.icon,
+      });
     } catch (error) {
       console.error('Error adding weight:', error);
-      Alert.alert('Error', error.message || 'No se pudo registrar el peso');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
     }
@@ -99,7 +127,12 @@ export default function ProgressScreen() {
       setAiAnalysisModal(true);
     } catch (error) {
       console.error('Error analyzing progress:', error);
-      Alert.alert('Error', error.message || 'No se pudo analizar el progreso');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setAnalyzingProgress(false);
     }
@@ -381,6 +414,23 @@ export default function ProgressScreen() {
         visible={aiAnalysisModal}
         onClose={() => setAiAnalysisModal(false)}
         analysis={aiAnalysis}
+      />
+
+      {/* System Modals */}
+      <ErrorModal
+        visible={errorModal.visible}
+        title={errorModal.modalData.title}
+        message={errorModal.modalData.message}
+        icon={errorModal.modalData.icon}
+        onClose={errorModal.closeModal}
+      />
+
+      <InfoModal
+        visible={infoModal.visible}
+        title={infoModal.modalData.title}
+        message={infoModal.modalData.message}
+        icon={infoModal.modalData.icon}
+        onClose={infoModal.closeModal}
       />
     </SafeAreaView>
   );
