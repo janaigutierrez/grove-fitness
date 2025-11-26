@@ -5,9 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
-  TextInput,
-  Alert,
   ActivityIndicator,
   Dimensions
 } from 'react-native';
@@ -21,6 +18,13 @@ import {
   getWorkoutSessions,
   analyzeProgress
 } from '../services/api';
+import { handleApiError, formatSuccessMessage, ValidationError } from '../utils/errorHandler';
+import AddWeightModal from '../components/progress/AddWeightModal';
+import AIAnalysisModal from '../components/progress/AIAnalysisModal';
+import ErrorModal from '../components/common/ErrorModal';
+import InfoModal from '../components/common/InfoModal';
+import useModal from '../hooks/useModal';
+import colors from '../constants/colors';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -37,6 +41,10 @@ export default function ProgressScreen() {
   const [aiAnalysisModal, setAiAnalysisModal] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [analyzingProgress, setAnalyzingProgress] = useState(false);
+
+  // System modals
+  const errorModal = useModal();
+  const infoModal = useModal();
 
   useEffect(() => {
     loadProgressData();
@@ -55,8 +63,12 @@ export default function ProgressScreen() {
       setStats(statsData);
       setRecentSessions(sessionsData.sessions || []);
     } catch (error) {
-      console.error('Error loading progress data:', error);
-      Alert.alert('Error', 'No se pudo cargar el progreso');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
     }
@@ -72,7 +84,13 @@ export default function ProgressScreen() {
     const weight = parseFloat(newWeight);
 
     if (isNaN(weight) || weight <= 0 || weight > 500) {
-      Alert.alert('Error', 'Por favor ingresa un peso válido');
+      const validationError = new ValidationError('Por favor ingresa un peso válido (0-500 kg)', 'weight');
+      const errorInfo = handleApiError(validationError);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
       return;
     }
 
@@ -82,10 +100,19 @@ export default function ProgressScreen() {
       await loadProgressData();
       setAddWeightModal(false);
       setNewWeight('');
-      Alert.alert('Éxito', 'Peso registrado correctamente');
+      const successInfo = formatSuccessMessage('Peso registrado correctamente');
+      infoModal.openModal({
+        title: successInfo.title,
+        message: successInfo.message,
+        icon: successInfo.icon,
+      });
     } catch (error) {
-      console.error('Error adding weight:', error);
-      Alert.alert('Error', error.message || 'No se pudo registrar el peso');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
     }
@@ -98,8 +125,12 @@ export default function ProgressScreen() {
       setAiAnalysis(analysis);
       setAiAnalysisModal(true);
     } catch (error) {
-      console.error('Error analyzing progress:', error);
-      Alert.alert('Error', error.message || 'No se pudo analizar el progreso');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        icon: errorInfo.icon,
+      });
     } finally {
       setAnalyzingProgress(false);
     }
@@ -150,7 +181,7 @@ export default function ProgressScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Cargando progreso...</Text>
         </View>
       </SafeAreaView>
@@ -174,35 +205,43 @@ export default function ProgressScreen() {
             style={styles.addWeightBtn}
             onPress={() => setAddWeightModal(true)}
           >
-            <Icon name="add-circle" size={24} color="#4CAF50" />
+            <Icon name="add-circle" size={20} color={colors.text.inverse} />
+            <Text style={styles.addWeightText}>Añadir Peso</Text>
           </TouchableOpacity>
         </View>
 
         {/* Stats Cards */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Icon name="barbell" size={24} color="#4CAF50" style={styles.statIcon} />
+            <Icon name="barbell" size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{stats?.total_workouts || 0}</Text>
             <Text style={styles.statLabel}>Entrenamientos</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Icon name="calendar" size={24} color="#4CAF50" style={styles.statIcon} />
+            <Icon name="calendar" size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{stats?.weeks_active || 0}</Text>
             <Text style={styles.statLabel}>Semanas activas</Text>
           </View>
 
-          <View style={styles.statCard}>
-            <Icon name="fitness" size={24} color="#4CAF50" style={styles.statIcon} />
+          <TouchableOpacity
+            style={[styles.statCard, styles.weightCard]}
+            onPress={() => setAddWeightModal(true)}
+          >
+            <Icon name="fitness" size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{currentWeight ? `${currentWeight}kg` : '-'}</Text>
             <Text style={styles.statLabel}>Peso actual</Text>
-          </View>
+            <View style={styles.addWeightHint}>
+              <Icon name="add" size={14} color={colors.primary} />
+              <Text style={styles.addWeightHintText}>Tap para añadir</Text>
+            </View>
+          </TouchableOpacity>
 
           <View style={styles.statCard}>
-            <Icon name="trending-up" size={24} color={weightChange >= 0 ? '#4CAF50' : '#f44336'} style={styles.statIcon} />
+            <Icon name="trending-up" size={24} color={weightChange >= 0 ? colors.primary : colors.danger} style={styles.statIcon} />
             <Text style={[
               styles.statValue,
-              { color: weightChange >= 0 ? '#4CAF50' : '#f44336' }
+              { color: weightChange >= 0 ? colors.primary : colors.danger }
             ]}>
               {weightChange !== null ? `${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)}kg` : '-'}
             </Text>
@@ -217,7 +256,7 @@ export default function ProgressScreen() {
           disabled={analyzingProgress}
         >
           <View style={styles.aiAnalysisLeft}>
-            <Icon name="sparkles" size={32} color="#FF9800" />
+            <Icon name="sparkles" size={32} color={colors.secondary} />
             <View style={styles.aiAnalysisTextContainer}>
               <Text style={styles.aiAnalysisTitle}>Análisis con IA</Text>
               <Text style={styles.aiAnalysisDesc}>
@@ -226,9 +265,9 @@ export default function ProgressScreen() {
             </View>
           </View>
           {analyzingProgress ? (
-            <ActivityIndicator color="#FF9800" />
+            <ActivityIndicator color={colors.secondary} />
           ) : (
-            <Icon name="arrow-forward-circle" size={28} color="#FF9800" />
+            <Icon name="arrow-forward-circle" size={28} color={colors.secondary} />
           )}
         </TouchableOpacity>
 
@@ -241,9 +280,9 @@ export default function ProgressScreen() {
               width={screenWidth - 40}
               height={220}
               chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
+                backgroundColor: colors.text.inverse,
+                backgroundGradientFrom: colors.text.inverse,
+                backgroundGradientTo: colors.text.inverse,
                 decimalPlaces: 1,
                 color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
@@ -253,7 +292,7 @@ export default function ProgressScreen() {
                 propsForDots: {
                   r: '4',
                   strokeWidth: '2',
-                  stroke: '#4CAF50'
+                  stroke: colors.primary
                 }
               }}
               bezier
@@ -262,7 +301,7 @@ export default function ProgressScreen() {
           </View>
         ) : (
           <View style={styles.emptyChartContainer}>
-            <Icon name="stats-chart-outline" size={48} color="#ccc" />
+            <Icon name="stats-chart-outline" size={48} color={colors.text.disabled} />
             <Text style={styles.emptyText}>No hay datos de peso</Text>
             <Text style={styles.emptySubtext}>Añade tu primer registro de peso</Text>
             <TouchableOpacity
@@ -290,7 +329,7 @@ export default function ProgressScreen() {
               return (
                 <View key={session._id || index} style={styles.activityItem}>
                   <View style={styles.activityIcon}>
-                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
+                    <Icon name="checkmark-circle" size={24} color={colors.primary} />
                   </View>
                   <View style={styles.activityContent}>
                     <Text style={styles.activityTitle}>{session.workout_id?.name || 'Entrenamiento'}</Text>
@@ -312,7 +351,7 @@ export default function ProgressScreen() {
             })
           ) : (
             <View style={styles.emptyActivity}>
-              <Icon name="barbell-outline" size={32} color="#ccc" />
+              <Icon name="barbell-outline" size={32} color={colors.text.disabled} />
               <Text style={styles.emptyActivityText}>No hay entrenamientos completados</Text>
             </View>
           )}
@@ -343,7 +382,7 @@ export default function ProgressScreen() {
                     {change !== null && (
                       <Text style={[
                         styles.weightItemChange,
-                        { color: change >= 0 ? '#4CAF50' : '#f44336' }
+                        { color: change >= 0 ? colors.primary : colors.danger }
                       ]}>
                         {change > 0 ? '+' : ''}{change.toFixed(1)}
                       </Text>
@@ -356,110 +395,41 @@ export default function ProgressScreen() {
         )}
       </ScrollView>
 
-      {/* Add Weight Modal */}
-      <Modal
+      {/* Modals */}
+      <AddWeightModal
         visible={addWeightModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setAddWeightModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Registrar Peso</Text>
-              <TouchableOpacity onPress={() => setAddWeightModal(false)}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
+        onClose={() => {
+          setAddWeightModal(false);
+          setNewWeight('');
+        }}
+        weight={newWeight}
+        onWeightChange={setNewWeight}
+        onSave={handleAddWeight}
+        loading={loading}
+      />
 
-            <Text style={styles.modalLabel}>Peso actual (kg)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ej: 75.5"
-              keyboardType="decimal-pad"
-              value={newWeight}
-              onChangeText={setNewWeight}
-              autoFocus
-            />
-
-            <TouchableOpacity
-              style={styles.modalSaveBtn}
-              onPress={handleAddWeight}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.modalSaveBtnText}>Guardar</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* AI Analysis Modal */}
-      <Modal
+      <AIAnalysisModal
         visible={aiAnalysisModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setAiAnalysisModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
-            <View style={styles.modalHeader}>
-              <View style={styles.aiModalHeader}>
-                <Icon name="sparkles" size={24} color="#FF9800" />
-                <Text style={styles.modalTitle}>Análisis de Progreso</Text>
-              </View>
-              <TouchableOpacity onPress={() => setAiAnalysisModal(false)}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
+        onClose={() => setAiAnalysisModal(false)}
+        analysis={aiAnalysis}
+      />
 
-            <ScrollView style={styles.aiAnalysisContent} showsVerticalScrollIndicator={false}>
-              {aiAnalysis ? (
-                <>
-                  <View style={styles.aiSection}>
-                    <Text style={styles.aiSectionTitle}>📊 Resumen</Text>
-                    <Text style={styles.aiText}>{aiAnalysis.analysis || 'Análisis no disponible'}</Text>
-                  </View>
+      {/* System Modals */}
+      <ErrorModal
+        visible={errorModal.visible}
+        title={errorModal.modalData.title}
+        message={errorModal.modalData.message}
+        icon={errorModal.modalData.icon}
+        onClose={errorModal.closeModal}
+      />
 
-                  {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                    <View style={styles.aiSection}>
-                      <Text style={styles.aiSectionTitle}>💡 Recomendaciones</Text>
-                      {aiAnalysis.recommendations.map((rec, index) => (
-                        <View key={index} style={styles.recommendationItem}>
-                          <Icon name="checkmark-circle" size={16} color="#4CAF50" />
-                          <Text style={styles.recommendationText}>{rec}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  {aiAnalysis.insights && (
-                    <View style={styles.aiSection}>
-                      <Text style={styles.aiSectionTitle}>✨ Insights</Text>
-                      <Text style={styles.aiText}>{aiAnalysis.insights}</Text>
-                    </View>
-                  )}
-                </>
-              ) : (
-                <View style={styles.aiEmptyState}>
-                  <Icon name="analytics-outline" size={64} color="#ccc" />
-                  <Text style={styles.aiEmptyText}>No hay análisis disponible</Text>
-                </View>
-              )}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.modalSaveBtn}
-              onPress={() => setAiAnalysisModal(false)}
-            >
-              <Text style={styles.modalSaveBtnText}>Cerrar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <InfoModal
+        visible={infoModal.visible}
+        title={infoModal.modalData.title}
+        message={infoModal.modalData.message}
+        icon={infoModal.modalData.icon}
+        onClose={infoModal.closeModal}
+      />
     </SafeAreaView>
   );
 }
@@ -467,7 +437,7 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
   },
   loadingContainer: {
     flex: 1,
@@ -477,7 +447,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
   },
   header: {
     flexDirection: 'row',
@@ -489,10 +459,37 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   addWeightBtn: {
-    padding: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  addWeightText: {
+    color: colors.text.inverse,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  weightCard: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+  },
+  addWeightHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 2,
+  },
+  addWeightHintText: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -520,12 +517,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 5,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: colors.text.secondary,
     textAlign: 'center',
   },
   chartContainer: {
@@ -543,7 +540,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 15,
   },
   chart: {
@@ -566,7 +563,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.text.secondary,
     marginTop: 15,
   },
   emptySubtext: {
@@ -576,7 +573,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
@@ -627,7 +624,7 @@ const styles = StyleSheet.create({
   activityVolume: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: colors.primary,
   },
   activityVolumeLabel: {
     fontSize: 11,
@@ -667,7 +664,7 @@ const styles = StyleSheet.create({
   },
   weightItemDate: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
   },
   weightItemRight: {
     flexDirection: 'row',
@@ -682,54 +679,6 @@ const styles = StyleSheet.create({
   weightItemChange: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D5016',
-  },
-  modalLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  modalSaveBtn: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  modalSaveBtnText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   aiAnalysisCard: {
     backgroundColor: 'white',
@@ -746,7 +695,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
+    borderLeftColor: colors.secondary,
   },
   aiAnalysisLeft: {
     flexDirection: 'row',
@@ -760,54 +709,11 @@ const styles = StyleSheet.create({
   aiAnalysisTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 4,
   },
   aiAnalysisDesc: {
     fontSize: 13,
-    color: '#666',
-  },
-  aiModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  aiAnalysisContent: {
-    padding: 20,
-  },
-  aiSection: {
-    marginBottom: 20,
-  },
-  aiSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2D5016',
-    marginBottom: 10,
-  },
-  aiText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 22,
-  },
-  recommendationItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-    gap: 8,
-  },
-  recommendationText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-  },
-  aiEmptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  aiEmptyText: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 15,
+    color: colors.text.secondary,
   },
 });

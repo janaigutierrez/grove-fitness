@@ -5,18 +5,25 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { updatePreferences, updateUserProfile } from '../services/api';
+import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
+import ErrorModal from '../components/common/ErrorModal';
+import InfoModal from '../components/common/InfoModal';
+import useModal from '../hooks/useModal';
 
 export default function OnboardingScreen({ route, onComplete }) {
   const { token, user } = route?.params || {};
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // System modals
+  const errorModal = useModal();
+  const infoModal = useModal();
 
   const [preferences, setPreferences] = useState({
     fitness_level: '',
@@ -171,26 +178,32 @@ export default function OnboardingScreen({ route, onComplete }) {
         goals: preferences.goals
       });
 
-      Alert.alert(
-        '🎉 ¡Configuración completa!',
-        '¡Todo listo para empezar! Vamos a crear tu primera rutina personalizada.',
-        [
-          {
-            text: 'Comenzar',
-            onPress: () => {
-              if (onComplete) {
-                onComplete(token, user);
-              }
-            }
+      const successInfo = formatSuccessMessage('¡Todo listo para empezar! Vamos a crear tu primera rutina personalizada.', 'success');
+      infoModal.openModal({
+        title: '🎉 ¡Configuración completa!',
+        message: successInfo.message,
+        icon: successInfo.icon,
+        buttonText: 'Comenzar',
+        onClose: () => {
+          infoModal.closeModal();
+          if (onComplete) {
+            onComplete(token, user);
           }
-        ]
-      );
+        }
+      });
     } catch (error) {
-      console.error('Error saving preferences:', error);
-      Alert.alert('Error', 'No se pudieron guardar las preferencias. Puedes configurarlas más tarde desde el perfil.');
-      if (onComplete) {
-        onComplete(token, user);
-      }
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: 'Error',
+        message: 'No se pudieron guardar las preferencias. Puedes configurarlas más tarde desde el perfil.',
+        icon: errorInfo.icon,
+        onClose: () => {
+          errorModal.closeModal();
+          if (onComplete) {
+            onComplete(token, user);
+          }
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -209,7 +222,7 @@ export default function OnboardingScreen({ route, onComplete }) {
           <Icon
             name={option.icon}
             size={28}
-            color={selected ? '#4CAF50' : '#666'}
+            color={selected ? colors.primary : colors.text.secondary}
             style={styles.optionIcon}
           />
         )}
@@ -229,7 +242,7 @@ export default function OnboardingScreen({ route, onComplete }) {
   };
 
   return (
-    <LinearGradient colors={['#4CAF50', '#2D5016']} style={{ flex: 1 }}>
+    <LinearGradient colors={[colors.primary, colors.primaryDark]} style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Progress Bar */}
@@ -299,6 +312,23 @@ export default function OnboardingScreen({ route, onComplete }) {
               )}
             </TouchableOpacity>
           </View>
+
+          {/* System Modals */}
+          <ErrorModal
+            visible={errorModal.visible}
+            title={errorModal.modalData.title}
+            message={errorModal.modalData.message}
+            icon={errorModal.modalData.icon}
+            onClose={errorModal.modalData.onClose || errorModal.closeModal}
+          />
+          <InfoModal
+            visible={infoModal.visible}
+            title={infoModal.modalData.title}
+            message={infoModal.modalData.message}
+            buttonText={infoModal.modalData.buttonText}
+            icon={infoModal.modalData.icon}
+            onClose={infoModal.modalData.onClose || infoModal.closeModal}
+          />
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -315,18 +345,18 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: colors.overlay.white30,
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderRadius: 2,
   },
   progressText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontSize: 12,
     textAlign: 'right',
     opacity: 0.9,
@@ -341,7 +371,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -367,8 +397,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   optionCardSelected: {
-    backgroundColor: 'white',
-    borderColor: '#4CAF50',
+    backgroundColor: colors.text.inverse,
+    borderColor: colors.primary,
   },
   optionIcon: {
     marginRight: 12,
@@ -379,14 +409,14 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text.primary,
   },
   optionLabelSelected: {
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   optionDesc: {
     fontSize: 12,
-    color: '#666',
+    color: colors.text.secondary,
     marginTop: 2,
   },
   buttonsContainer: {
@@ -398,14 +428,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: colors.overlay.white20,
     padding: 16,
     borderRadius: 12,
     flex: 1,
     gap: 8,
   },
   backButtonText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -413,7 +443,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     padding: 16,
     borderRadius: 12,
     flex: 2,
@@ -426,7 +456,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   nextButtonText: {
-    color: '#2D5016',
+    color: colors.primaryDark,
     fontSize: 16,
     fontWeight: 'bold',
   },

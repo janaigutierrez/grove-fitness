@@ -29,6 +29,7 @@ export default function ActiveWorkoutScreen({
   const [restTimer, setRestTimer] = useState(0);
   const [completedSets, setCompletedSets] = useState([]);
   const [totalElapsedTime, setTotalElapsedTime] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   const exercise = workout?.exercises?.[currentExercise];
   const totalSets = exercise?.custom_sets || exercise?.exercise_id?.default_sets || 3;
@@ -45,7 +46,7 @@ export default function ActiveWorkoutScreen({
   // Timer de descanso
   useEffect(() => {
     let interval;
-    if (restTimer > 0) {
+    if (restTimer > 0 && !isPaused) {
       interval = setInterval(() => {
         setRestTimer(prev => {
           if (prev <= 1) {
@@ -56,15 +57,18 @@ export default function ActiveWorkoutScreen({
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [restTimer]);
+  }, [restTimer, isPaused]);
 
   // Total elapsed time
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTotalElapsedTime(prev => prev + 1);
-    }, 1000);
+    let interval;
+    if (!isPaused) {
+      interval = setInterval(() => {
+        setTotalElapsedTime(prev => prev + 1);
+      }, 1000);
+    }
     return () => clearInterval(interval);
-  }, []);
+  }, [isPaused]);
 
   const handleCompleteSet = () => {
     const newCompletedSet = {
@@ -84,11 +88,11 @@ export default function ActiveWorkoutScreen({
     else if (currentExercise < totalExercises - 1) {
       setCurrentExercise(currentExercise + 1);
       setCurrentSet(1);
-      setRestTimer(0); // No rest between exercises, just show next one
+      setRestTimer(120); // 2 minutes rest between exercises
     }
     // Workout completado
     else {
-      onComplete(completedSets);
+      onComplete([...completedSets, newCompletedSet]);
     }
   };
 
@@ -130,7 +134,16 @@ export default function ActiveWorkoutScreen({
               Exercise {currentExercise + 1} of {totalExercises}
             </Text>
           </View>
-          <View style={styles.closeButton} />
+          <TouchableOpacity
+            onPress={() => setIsPaused(!isPaused)}
+            style={[styles.closeButton, isPaused && styles.pauseButtonActive]}
+          >
+            <Icon
+              name={isPaused ? "play" : "pause"}
+              size={24}
+              color={colors.text.inverse}
+            />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -245,8 +258,13 @@ export default function ActiveWorkoutScreen({
           {restTimer > 0 ? (
             <>
               <TouchableOpacity
-                style={[styles.actionButton, styles.secondaryButton]}
+                style={[
+                  styles.actionButton,
+                  styles.secondaryButton,
+                  isPaused && styles.actionButtonDisabled
+                ]}
                 onPress={handleSkipRest}
+                disabled={isPaused}
               >
                 <Icon name="play-skip-forward" size={20} color={colors.text.inverse} />
                 <Text style={styles.actionButtonText}>Skip Rest</Text>
@@ -254,8 +272,13 @@ export default function ActiveWorkoutScreen({
             </>
           ) : (
             <TouchableOpacity
-              style={[styles.actionButton, styles.primaryButton]}
+              style={[
+                styles.actionButton,
+                styles.primaryButton,
+                isPaused && styles.actionButtonDisabled
+              ]}
               onPress={handleCompleteSet}
+              disabled={isPaused}
             >
               <Icon
                 name={currentExercise >= totalExercises - 1 && currentSet >= totalSets ? "checkmark-circle" : "checkmark"}
@@ -266,6 +289,26 @@ export default function ActiveWorkoutScreen({
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Pause Overlay */}
+        {isPaused && (
+          <View style={styles.pauseOverlay}>
+            <View style={styles.pauseContent}>
+              <Icon name="pause-circle" size={80} color={colors.text.inverse} />
+              <Text style={styles.pauseTitle}>WORKOUT PAUSED</Text>
+              <Text style={styles.pauseSubtitle}>
+                Take your time, tap to resume
+              </Text>
+              <TouchableOpacity
+                style={styles.resumeButton}
+                onPress={() => setIsPaused(false)}
+              >
+                <Icon name="play" size={28} color={colors.primaryDark} />
+                <Text style={styles.resumeButtonText}>RESUME</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
     </LinearGradient>
   );
@@ -477,5 +520,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: colors.primaryDark,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
+  },
+  pauseButtonActive: {
+    backgroundColor: colors.warning,
+  },
+  pauseOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  pauseContent: {
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  pauseTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.text.inverse,
+    marginTop: spacing.lg,
+    letterSpacing: 2,
+  },
+  pauseSubtitle: {
+    fontSize: 16,
+    color: colors.overlay.white30,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  resumeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.text.inverse,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 30,
+    gap: spacing.sm,
+  },
+  resumeButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primaryDark,
+    letterSpacing: 1,
   },
 });

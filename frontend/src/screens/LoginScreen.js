@@ -6,21 +6,32 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Alert,
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { login } from '../services/api';
+import { handleApiError, ValidationError } from '../utils/errorHandler';
+import ErrorModal from '../components/common/ErrorModal';
+import useModal from '../hooks/useModal';
 
 export default function LoginScreen({ navigation, onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // System modals
+    const errorModal = useModal();
+
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Si us plau, omple tots els camps');
+            const validationError = new ValidationError('Por favor, completa todos los campos');
+            const errorInfo = handleApiError(validationError);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message,
+                icon: errorInfo.icon,
+            });
             return;
         }
 
@@ -32,17 +43,27 @@ export default function LoginScreen({ navigation, onLogin }) {
             if (response.accessToken && response.user) {
                 onLogin(response.accessToken, response.user);
             } else {
-                Alert.alert('Error', 'Resposta inesperada del servidor');
+                const errorInfo = handleApiError(new Error('Respuesta inesperada del servidor'));
+                errorModal.openModal({
+                    title: errorInfo.title,
+                    message: errorInfo.message,
+                    icon: errorInfo.icon,
+                });
             }
         } catch (error) {
-            Alert.alert('Error', error.message || 'Error al iniciar sessió');
+            const errorInfo = handleApiError(error);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message || 'Error al iniciar sesión',
+                icon: errorInfo.icon,
+            });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <LinearGradient colors={['#4CAF50', '#2D5016']} style={{ flex: 1 }}>
+        <LinearGradient colors={[colors.primary, colors.primaryDark]} style={{ flex: 1 }}>
             <SafeAreaView style={styles.container}>
                 {/* Header */}
                 <View style={styles.header}>
@@ -102,6 +123,15 @@ export default function LoginScreen({ navigation, onLogin }) {
                         <Text style={styles.linkText}>No tens compte? Registra't</Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* System Modals */}
+                <ErrorModal
+                    visible={errorModal.visible}
+                    title={errorModal.modalData.title}
+                    message={errorModal.modalData.message}
+                    icon={errorModal.modalData.icon}
+                    onClose={errorModal.modalData.onClose || errorModal.closeModal}
+                />
             </SafeAreaView>
         </LinearGradient>
     );
@@ -122,14 +152,14 @@ const styles = StyleSheet.create({
         marginBottom: 30,
     },
     backButtonText: {
-        color: 'white',
+        color: colors.text.inverse,
         fontSize: 16,
         fontWeight: '500',
     },
     title: {
         fontSize: 64,
         fontWeight: 'bold',
-        color: 'white',
+        color: colors.text.inverse,
         marginBottom: 10,
     },
     subtitle: {
@@ -145,19 +175,19 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: 'white',
+        color: colors.text.inverse,
     },
     input: {
         backgroundColor: 'rgba(255,255,255,0.2)',
         borderRadius: 12,
         padding: 16,
         fontSize: 16,
-        color: 'white',
+        color: colors.text.inverse,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.3)',
     },
     button: {
-        backgroundColor: 'white',
+        backgroundColor: colors.text.inverse,
         padding: 18,
         borderRadius: 12,
         alignItems: 'center',
@@ -169,7 +199,7 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     buttonText: {
-        color: '#2D5016',
+        color: colors.primaryDark,
         fontSize: 18,
         fontWeight: 'bold',
     },
@@ -178,7 +208,7 @@ const styles = StyleSheet.create({
         padding: 10,
     },
     linkText: {
-        color: 'white',
+        color: colors.text.inverse,
         fontSize: 16,
         textDecorationLine: 'underline',
     },

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,11 @@ import {
   updateWeeklySchedule,
   getWorkouts
 } from '../services/api';
+import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
+import ConfirmModal from '../components/common/ConfirmModal';
+import InfoModal from '../components/common/InfoModal';
+import ErrorModal from '../components/common/ErrorModal';
+import useModal from '../hooks/useModal';
 
 const DAYS_OF_WEEK = [
   { key: 'monday', label: 'Lunes', icon: 'moon' },
@@ -35,6 +39,11 @@ export default function WeeklyScheduleScreen({ navigation }) {
   const [selectedDay, setSelectedDay] = useState(null);
   const [workoutPickerVisible, setWorkoutPickerVisible] = useState(false);
 
+  // System modals
+  const confirmModal = useModal();
+  const infoModal = useModal();
+  const errorModal = useModal();
+
   useEffect(() => {
     loadData();
   }, []);
@@ -50,8 +59,12 @@ export default function WeeklyScheduleScreen({ navigation }) {
       setSchedule(scheduleData.weekly_schedule || {});
       setWorkouts(workoutsData.workouts || []);
     } catch (error) {
-      console.error('Error loading schedule:', error);
-      Alert.alert('Error', 'No se pudo cargar el schedule');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: 'No se pudo cargar el schedule',
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
     }
@@ -67,7 +80,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
 
     const newSchedule = {
       ...schedule,
-      [selectedDay]: workout._id
+      [selectedDay]: workout.id || workout._id
     };
 
     setSchedule(newSchedule);
@@ -79,23 +92,22 @@ export default function WeeklyScheduleScreen({ navigation }) {
   };
 
   const handleRemoveWorkout = async (dayKey) => {
-    Alert.alert(
-      'Eliminar entrenamiento',
-      '¿Estás seguro de que quieres eliminar este entrenamiento del día?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            const newSchedule = { ...schedule };
-            delete newSchedule[dayKey];
-            setSchedule(newSchedule);
-            await saveSchedule(newSchedule);
-          }
-        }
-      ]
-    );
+    confirmModal.openModal({
+      title: 'Eliminar entrenamiento',
+      message: '¿Estás seguro de que quieres eliminar este entrenamiento del día?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      icon: 'trash',
+      onConfirm: async () => {
+        confirmModal.closeModal();
+        const newSchedule = { ...schedule };
+        delete newSchedule[dayKey];
+        setSchedule(newSchedule);
+        await saveSchedule(newSchedule);
+      },
+      onCancel: confirmModal.closeModal,
+    });
   };
 
   const handleSetRestDay = async (dayKey) => {
@@ -115,10 +127,21 @@ export default function WeeklyScheduleScreen({ navigation }) {
     try {
       setSaving(true);
       await updateWeeklySchedule({ weekly_schedule: newSchedule });
-      Alert.alert('Éxito', 'Schedule actualizado');
+
+      const successInfo = formatSuccessMessage('Schedule actualizado', 'success');
+      infoModal.openModal({
+        title: successInfo.title,
+        message: successInfo.message,
+        icon: successInfo.icon,
+        onClose: infoModal.closeModal,
+      });
     } catch (error) {
-      console.error('Error saving schedule:', error);
-      Alert.alert('Error', 'No se pudo guardar el schedule');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: 'No se pudo guardar el schedule',
+        icon: errorInfo.icon,
+      });
     } finally {
       setSaving(false);
     }
@@ -150,7 +173,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
           <Icon
             name={day.icon}
             size={24}
-            color={hasWorkout ? (isRestDay ? '#999' : '#4CAF50') : '#ccc'}
+            color={hasWorkout ? (isRestDay ? colors.text.tertiary : colors.primary) : colors.text.disabled}
           />
           <Text style={[
             styles.dayLabel,
@@ -199,7 +222,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.main }}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -258,7 +281,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
                 style={styles.workoutOption}
                 onPress={() => handleSetRestDay(selectedDay)}
               >
-                <View style={[styles.workoutIconContainer, { backgroundColor: '#999' }]}>
+                <View style={[styles.workoutIconContainer, { backgroundColor: colors.text.tertiary }]}>
                   <Icon name="bed" size={24} color="white" />
                 </View>
                 <View style={styles.workoutOptionContent}>
@@ -302,6 +325,33 @@ export default function WeeklyScheduleScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* System Modals */}
+      <ConfirmModal
+        visible={confirmModal.visible}
+        title={confirmModal.modalData.title}
+        message={confirmModal.modalData.message}
+        confirmText={confirmModal.modalData.confirmText}
+        cancelText={confirmModal.modalData.cancelText}
+        variant={confirmModal.modalData.variant}
+        icon={confirmModal.modalData.icon}
+        onConfirm={confirmModal.modalData.onConfirm || confirmModal.closeModal}
+        onCancel={confirmModal.modalData.onCancel || confirmModal.closeModal}
+      />
+      <InfoModal
+        visible={infoModal.visible}
+        title={infoModal.modalData.title}
+        message={infoModal.modalData.message}
+        icon={infoModal.modalData.icon}
+        onClose={infoModal.modalData.onClose || infoModal.closeModal}
+      />
+      <ErrorModal
+        visible={errorModal.visible}
+        title={errorModal.modalData.title}
+        message={errorModal.modalData.message}
+        icon={errorModal.modalData.icon}
+        onClose={errorModal.modalData.onClose || errorModal.closeModal}
+      />
     </SafeAreaView>
   );
 }
@@ -309,7 +359,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
   },
   loadingContainer: {
     flex: 1,
@@ -319,21 +369,21 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   infoCard: {
     flexDirection: 'row',
@@ -347,7 +397,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   scrollContainer: {
     flex: 1,
@@ -357,7 +407,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   dayCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -370,10 +420,10 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   dayCardActive: {
-    borderColor: '#4CAF50',
+    borderColor: colors.primary,
   },
   dayCardRest: {
-    borderColor: '#999',
+    borderColor: colors.text.tertiary,
     backgroundColor: '#f9f9f9',
   },
   dayHeader: {
@@ -385,10 +435,10 @@ const styles = StyleSheet.create({
   dayLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#999',
+    color: colors.text.tertiary,
   },
   dayLabelActive: {
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   workoutInfo: {
     flexDirection: 'row',
@@ -398,11 +448,11 @@ const styles = StyleSheet.create({
   workoutName: {
     flex: 1,
     fontSize: 16,
-    color: '#4CAF50',
+    color: colors.primary,
     fontWeight: '600',
   },
   workoutNameRest: {
-    color: '#999',
+    color: colors.text.tertiary,
     fontStyle: 'italic',
   },
   removeBtn: {
@@ -415,7 +465,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.text.tertiary,
     fontStyle: 'italic',
   },
   savingIndicator: {
@@ -423,7 +473,7 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: 20,
     right: 20,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -432,17 +482,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   savingText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontSize: 14,
     fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.background.overlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -459,7 +509,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   workoutList: {
     padding: 20,
@@ -468,7 +518,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 15,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
     borderRadius: 10,
     marginBottom: 10,
   },
@@ -476,7 +526,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -487,12 +537,12 @@ const styles = StyleSheet.create({
   workoutOptionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text.primary,
     marginBottom: 3,
   },
   workoutOptionDesc: {
     fontSize: 13,
-    color: '#666',
+    color: colors.text.secondary,
   },
   emptyWorkouts: {
     alignItems: 'center',
@@ -501,12 +551,12 @@ const styles = StyleSheet.create({
   emptyWorkoutsText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#999',
+    color: colors.text.tertiary,
     marginTop: 15,
   },
   emptyWorkoutsSubtext: {
     fontSize: 14,
-    color: '#ccc',
+    color: colors.text.disabled,
     marginTop: 5,
   },
 });

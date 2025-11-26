@@ -1,29 +1,30 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError } from '../utils/errorHandler';
+import logger from '../utils/logger';
 
 // ============ CONFIGURACIÓ ============
-const API_CONFIG = {
-    development: {
-        web: 'http://localhost:5000/api',
-        mobile: 'http://192.168.1.138:5000/api' // CANVIA AIXÒ segons la teva IP
-    },
-    production: {
-        web: 'https://tu-api.com/api',
-        mobile: 'https://tu-api.com/api'
-    }
-};
-
-const ENV = 'development'; // Canviar a 'production' en producció
-
 const getBaseUrl = () => {
     const platform = Platform.OS === 'web' ? 'web' : 'mobile';
-    return API_CONFIG[ENV][platform];
+    const env = process.env.EXPO_PUBLIC_ENV || 'development';
+
+    // Use environment variables with fallback to hardcoded values
+    if (env === 'production') {
+        return process.env.EXPO_PUBLIC_API_URL_PRODUCTION || 'https://tu-api.com/api';
+    }
+
+    // Development environment
+    if (platform === 'web') {
+        return process.env.EXPO_PUBLIC_API_URL_WEB || 'http://localhost:5000/api';
+    } else {
+        return process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.1.138:5000/api';
+    }
 };
 
 const BASE_URL = getBaseUrl();
 
-console.log('🌐 API URL:', BASE_URL);
+logger.info('API URL:', BASE_URL);
+logger.info('Environment:', process.env.EXPO_PUBLIC_ENV || 'development');
 
 // ============ FUNCIÓ FETCH CENTRALITZADA ============
 const fetchWithAuth = async (endpoint, options = {}) => {
@@ -42,7 +43,7 @@ const fetchWithAuth = async (endpoint, options = {}) => {
     }
 
     try {
-        console.log(`📤 ${options.method || 'GET'} ${url}`);
+        logger.api.request(options.method || 'GET', url);
 
         const response = await fetch(url, {
             ...options,
@@ -50,7 +51,7 @@ const fetchWithAuth = async (endpoint, options = {}) => {
         });
 
         const data = await response.json();
-        console.log(`📥 Response (${response.status}):`, data);
+        logger.api.response(response.status, data);
 
         if (!response.ok) {
             // Si és 401 (no autoritzat) i no estem en login/register
@@ -71,7 +72,7 @@ const fetchWithAuth = async (endpoint, options = {}) => {
         return data;
 
     } catch (error) {
-        console.error('❌ Error en fetch:', error);
+        logger.api.error(error);
 
         if (error instanceof ApiError) {
             throw error;
@@ -124,7 +125,7 @@ export const logout = async () => {
             method: 'POST'
         });
     } catch (error) {
-        console.log('Error en logout del servidor, però netejant local');
+        logger.warn('Error en logout del servidor, però netejant local');
     } finally {
         await AsyncStorage.removeItem('token');
         await AsyncStorage.removeItem('user');

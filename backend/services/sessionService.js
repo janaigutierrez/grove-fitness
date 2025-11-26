@@ -213,6 +213,8 @@ const completeSession = async (sessionId, userId, completionData) => {
 
     // Update session
     session.completed = true;
+    session.abandoned = false; // Clear abandoned flag if it was set
+    session.abandon_reason = undefined; // Clear abandon reason
     session.completed_at = completedAt;
     session.total_duration_minutes = totalDuration;
     session.perceived_difficulty = perceived_difficulty;

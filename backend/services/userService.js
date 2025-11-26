@@ -37,10 +37,11 @@ const updateProfile = async (userId, updateData) => {
 };
 
 const getStats = async (userId) => {
-    // Total workouts completed
+    // Total workouts completed (exclude abandoned sessions)
     const totalWorkouts = await WorkoutSession.countDocuments({
         user_id: userId,
-        completed: true
+        completed: true,
+        abandoned: { $ne: true }
     });
 
     // Total exercises created
@@ -56,13 +57,15 @@ const getStats = async (userId) => {
     const thisWeekWorkouts = await WorkoutSession.countDocuments({
         user_id: userId,
         completed: true,
+        abandoned: { $ne: true },
         completed_at: { $gte: weekStart }
     });
 
-    // Recent sessions
+    // Recent sessions (exclude abandoned)
     const recentSessions = await WorkoutSession.find({
         user_id: userId,
-        completed: true
+        completed: true,
+        abandoned: { $ne: true }
     })
         .populate('workout_id', 'name workout_type')
         .sort({ completed_at: -1 })
@@ -81,10 +84,11 @@ const getStats = async (userId) => {
         total_volume_kg: session.total_volume_kg
     }));
 
-    // Calculate streak
+    // Calculate streak (exclude abandoned sessions)
     const sessions = await WorkoutSession.find({
         user_id: userId,
-        completed: true
+        completed: true,
+        abandoned: { $ne: true }
     })
         .sort({ completed_at: -1 })
         .select('completed_at');

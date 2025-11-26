@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Modal
@@ -15,6 +14,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { chatWithAI, getCurrentUser, changeAIPersonality } from '../services/api';
+import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
+import ErrorModal from '../components/common/ErrorModal';
+import InfoModal from '../components/common/InfoModal';
+import useModal from '../hooks/useModal';
+import colors from '../constants/colors';
 
 export default function AIChatScreen() {
   const [messages, setMessages] = useState([]);
@@ -24,6 +28,10 @@ export default function AIChatScreen() {
   const [personalityModalVisible, setPersonalityModalVisible] = useState(false);
   const [changingPersonality, setChangingPersonality] = useState(false);
   const scrollViewRef = useRef();
+
+  // System modals
+  const errorModal = useModal();
+  const infoModal = useModal();
 
   useEffect(() => {
     loadUser();
@@ -43,7 +51,6 @@ export default function AIChatScreen() {
       const userData = await getCurrentUser();
       setUser(userData);
     } catch (error) {
-      console.error('Error loading user:', error);
     }
   };
 
@@ -78,8 +85,12 @@ export default function AIChatScreen() {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch (error) {
-      console.error('Error sending message:', error);
-      Alert.alert('Error', error.message || 'No se pudo enviar el mensaje');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: errorInfo.title,
+        message: errorInfo.message || 'No se pudo enviar el mensaje',
+        icon: errorInfo.icon,
+      });
     } finally {
       setLoading(false);
     }
@@ -94,16 +105,23 @@ export default function AIChatScreen() {
       setUser({ ...user, ai_personality_type: personalityType });
       setPersonalityModalVisible(false);
 
-      Alert.alert(
-        'Personalidad actualizada',
-        `Tu entrenador IA ahora tiene personalidad ${personalityType}`
-      );
+      const successInfo = formatSuccessMessage(`Tu entrenador IA ahora tiene personalidad ${personalityType}`, 'success');
+      infoModal.openModal({
+        title: 'Personalidad actualizada',
+        message: successInfo.message,
+        icon: successInfo.icon,
+        onClose: infoModal.closeModal,
+      });
 
       // Recargar usuario para asegurar que esté sincronizado
       await loadUser();
     } catch (error) {
-      console.error('Error changing personality:', error);
-      Alert.alert('Error', error.message || 'No se pudo cambiar la personalidad');
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: 'Error',
+        message: errorInfo.message || 'No se pudo cambiar la personalidad',
+        icon: errorInfo.icon,
+      });
     } finally {
       setChangingPersonality(false);
     }
@@ -133,11 +151,11 @@ export default function AIChatScreen() {
       case 'analítico':
         return '#4A90E2';
       case 'bestia':
-        return '#2D5016';
+        return colors.primaryDark;
       case 'relajado':
-        return '#4CAF50';
+        return colors.primary;
       default:
-        return '#4CAF50';
+        return colors.primary;
     }
   };
 
@@ -195,7 +213,7 @@ export default function AIChatScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.main }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -254,7 +272,7 @@ export default function AIChatScreen() {
           <TouchableOpacity
             style={[
               styles.sendButton,
-              { backgroundColor: inputText.trim() ? getPersonalityColor() : '#ccc' }
+              { backgroundColor: inputText.trim() ? getPersonalityColor() : colors.text.disabled }
             ]}
             onPress={handleSend}
             disabled={!inputText.trim() || loading}
@@ -339,7 +357,7 @@ export default function AIChatScreen() {
                   onPress={() => handleChangePersonality('bestia')}
                   disabled={changingPersonality}
                 >
-                  <View style={[styles.personalityIcon, { backgroundColor: '#2D5016' }]}>
+                  <View style={[styles.personalityIcon, { backgroundColor: colors.primaryDark }]}>
                     <Icon name="fitness" size={28} color="white" />
                   </View>
                   <View style={styles.personalityInfo}>
@@ -362,7 +380,7 @@ export default function AIChatScreen() {
                   onPress={() => handleChangePersonality('relajado')}
                   disabled={changingPersonality}
                 >
-                  <View style={[styles.personalityIcon, { backgroundColor: '#4CAF50' }]}>
+                  <View style={[styles.personalityIcon, { backgroundColor: colors.primary }]}>
                     <Icon name="leaf" size={28} color="white" />
                   </View>
                   <View style={styles.personalityInfo}>
@@ -386,6 +404,22 @@ export default function AIChatScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* System Modals */}
+        <ErrorModal
+          visible={errorModal.visible}
+          title={errorModal.modalData.title}
+          message={errorModal.modalData.message}
+          icon={errorModal.modalData.icon}
+          onClose={errorModal.modalData.onClose || errorModal.closeModal}
+        />
+        <InfoModal
+          visible={infoModal.visible}
+          title={infoModal.modalData.title}
+          message={infoModal.modalData.message}
+          icon={infoModal.modalData.icon}
+          onClose={infoModal.modalData.onClose || infoModal.closeModal}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -397,7 +431,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 15,
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
@@ -416,16 +450,16 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#666',
+    color: colors.text.secondary,
     marginTop: 2,
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
   },
   messagesContent: {
     padding: 15,
@@ -453,7 +487,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2D5016',
+    backgroundColor: colors.primaryDark,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
@@ -464,11 +498,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   userBubble: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     borderBottomRightRadius: 4,
   },
   aiBubble: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderBottomLeftRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -481,21 +515,21 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   userText: {
-    color: 'white',
+    color: colors.text.inverse,
   },
   aiText: {
-    color: '#333',
+    color: colors.text.primary,
   },
   messageTime: {
     fontSize: 10,
     marginTop: 4,
   },
   userTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.overlay.white30,
     textAlign: 'right',
   },
   aiTime: {
-    color: '#999',
+    color: colors.text.tertiary,
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -505,20 +539,20 @@ const styles = StyleSheet.create({
   loadingText: {
     marginLeft: 10,
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
     fontStyle: 'italic',
   },
   inputContainer: {
     flexDirection: 'row',
     padding: 10,
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     alignItems: 'flex-end',
   },
   input: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 10,
@@ -539,11 +573,11 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.background.overlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text.inverse,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -559,11 +593,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
   },
   modalDescription: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
     marginBottom: 20,
   },
   personalitiesContainer: {
@@ -572,7 +606,7 @@ const styles = StyleSheet.create({
   personalityCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.main,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -580,7 +614,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   personalityCardActive: {
-    borderColor: '#4CAF50',
+    borderColor: colors.primary,
     backgroundColor: '#e8f5e9',
   },
   personalityIcon: {
@@ -597,12 +631,12 @@ const styles = StyleSheet.create({
   personalityName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: colors.primaryDark,
     marginBottom: 4,
   },
   personalityDesc: {
     fontSize: 13,
-    color: '#666',
+    color: colors.text.secondary,
     lineHeight: 18,
   },
   loadingOverlay: {
@@ -620,6 +654,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
   },
 });
