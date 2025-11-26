@@ -3,27 +3,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError } from '../utils/errorHandler';
 
 // ============ CONFIGURACIÓ ============
-const API_CONFIG = {
-    development: {
-        web: 'http://localhost:5000/api',
-        mobile: 'http://192.168.1.138:5000/api' // CANVIA AIXÒ segons la teva IP
-    },
-    production: {
-        web: 'https://tu-api.com/api',
-        mobile: 'https://tu-api.com/api'
-    }
-};
-
-const ENV = 'development'; // Canviar a 'production' en producció
-
 const getBaseUrl = () => {
     const platform = Platform.OS === 'web' ? 'web' : 'mobile';
-    return API_CONFIG[ENV][platform];
+    const env = process.env.EXPO_PUBLIC_ENV || 'development';
+
+    // Use environment variables with fallback to hardcoded values
+    if (env === 'production') {
+        return process.env.EXPO_PUBLIC_API_URL_PRODUCTION || 'https://tu-api.com/api';
+    }
+
+    // Development environment
+    if (platform === 'web') {
+        return process.env.EXPO_PUBLIC_API_URL_WEB || 'http://localhost:5000/api';
+    } else {
+        return process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.1.138:5000/api';
+    }
 };
 
 const BASE_URL = getBaseUrl();
 
 console.log('🌐 API URL:', BASE_URL);
+console.log('🌐 Environment:', process.env.EXPO_PUBLIC_ENV || 'development');
 
 // ============ FUNCIÓ FETCH CENTRALITZADA ============
 const fetchWithAuth = async (endpoint, options = {}) => {
