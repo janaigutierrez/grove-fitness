@@ -7,12 +7,15 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
-    Alert,
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { register } from '../services/api';
+import { handleApiError, ValidationError, formatSuccessMessage } from '../utils/errorHandler';
+import ErrorModal from '../components/common/ErrorModal';
+import InfoModal from '../components/common/InfoModal';
+import useModal from '../hooks/useModal';
 
 export default function RegisterScreen({ navigation, onLogin }) {
     const [formData, setFormData] = useState({
@@ -24,6 +27,10 @@ export default function RegisterScreen({ navigation, onLogin }) {
     });
     const [loading, setLoading] = useState(false);
 
+    // System modals
+    const errorModal = useModal();
+    const infoModal = useModal();
+
     const validateUsername = (username) => {
         const usernameRegex = /^[a-zA-Z0-9_-]+$/;
         return usernameRegex.test(username);
@@ -32,30 +39,60 @@ export default function RegisterScreen({ navigation, onLogin }) {
     const handleRegister = async () => {
         // Validacions
         if (!formData.name || !formData.username || !formData.email || !formData.password) {
-            Alert.alert('Error', 'Si us plau, omple tots els camps');
+            const validationError = new ValidationError('Por favor, completa todos los campos');
+            const errorInfo = handleApiError(validationError);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message,
+                icon: errorInfo.icon,
+            });
             return;
         }
 
         if (formData.username.length < 3) {
-            Alert.alert('Error', 'El nom d\'usuari ha de tenir almenys 3 caràcters');
+            const validationError = new ValidationError('El nombre de usuario debe tener al menos 3 caracteres', 'username');
+            const errorInfo = handleApiError(validationError);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message,
+                icon: errorInfo.icon,
+            });
             return;
         }
 
         if (!validateUsername(formData.username)) {
-            Alert.alert(
-                'Error',
-                'El nom d\'usuari només pot contenir lletres, números, guions (-) i guions baixos (_)'
+            const validationError = new ValidationError(
+                'El nombre de usuario solo puede contener letras, números, guiones (-) y guiones bajos (_)',
+                'username'
             );
+            const errorInfo = handleApiError(validationError);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message,
+                icon: errorInfo.icon,
+            });
             return;
         }
 
         if (formData.password !== formData.confirmPassword) {
-            Alert.alert('Error', 'Les contrasenyes no coincideixen');
+            const validationError = new ValidationError('Las contraseñas no coinciden', 'password');
+            const errorInfo = handleApiError(validationError);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message,
+                icon: errorInfo.icon,
+            });
             return;
         }
 
         if (formData.password.length < 6) {
-            Alert.alert('Error', 'La contrasenya ha de tenir almenys 6 caràcters');
+            const validationError = new ValidationError('La contraseña debe tener al menos 6 caracteres', 'password');
+            const errorInfo = handleApiError(validationError);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message,
+                icon: errorInfo.icon,
+            });
             return;
         }
 
@@ -71,23 +108,32 @@ export default function RegisterScreen({ navigation, onLogin }) {
 
             // Navegar a Onboarding
             if (response.accessToken && response.user) {
-                Alert.alert(
-                    '🎉 Bienvenido a Grove!',
+                const successInfo = formatSuccessMessage(
                     `Hola ${formData.name}! Tu cuenta se ha creado correctamente.\n\n¡Vamos a configurar tu perfil! 💪`,
-                    [
-                        {
-                            text: 'Continuar',
-                            onPress: () => navigation.navigate('Onboarding', {
-                                token: response.accessToken,
-                                user: response.user,
-                                onComplete: onLogin
-                            })
-                        }
-                    ]
+                    'success'
                 );
+                infoModal.openModal({
+                    title: '🎉 Bienvenido a Grove!',
+                    message: successInfo.message,
+                    icon: successInfo.icon,
+                    buttonText: 'Continuar',
+                    onClose: () => {
+                        infoModal.closeModal();
+                        navigation.navigate('Onboarding', {
+                            token: response.accessToken,
+                            user: response.user,
+                            onComplete: onLogin
+                        });
+                    }
+                });
             }
         } catch (error) {
-            Alert.alert('Error', error.message || 'Error al registrar-se');
+            const errorInfo = handleApiError(error);
+            errorModal.openModal({
+                title: errorInfo.title,
+                message: errorInfo.message || 'Error al registrarse',
+                icon: errorInfo.icon,
+            });
         } finally {
             setLoading(false);
         }
@@ -204,6 +250,23 @@ export default function RegisterScreen({ navigation, onLogin }) {
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
+
+                {/* System Modals */}
+                <ErrorModal
+                    visible={errorModal.visible}
+                    title={errorModal.modalData.title}
+                    message={errorModal.modalData.message}
+                    icon={errorModal.modalData.icon}
+                    onClose={errorModal.modalData.onClose || errorModal.closeModal}
+                />
+                <InfoModal
+                    visible={infoModal.visible}
+                    title={infoModal.modalData.title}
+                    message={infoModal.modalData.message}
+                    buttonText={infoModal.modalData.buttonText}
+                    icon={infoModal.modalData.icon}
+                    onClose={infoModal.modalData.onClose || infoModal.closeModal}
+                />
             </SafeAreaView>
         </LinearGradient>
     );
