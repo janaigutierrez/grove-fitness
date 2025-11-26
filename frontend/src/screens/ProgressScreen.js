@@ -5,8 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
-  TextInput,
   Alert,
   ActivityIndicator,
   Dimensions
@@ -21,6 +19,8 @@ import {
   getWorkoutSessions,
   analyzeProgress
 } from '../services/api';
+import AddWeightModal from '../components/progress/AddWeightModal';
+import AIAnalysisModal from '../components/progress/AIAnalysisModal';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -364,110 +364,24 @@ export default function ProgressScreen() {
         )}
       </ScrollView>
 
-      {/* Add Weight Modal */}
-      <Modal
+      {/* Modals */}
+      <AddWeightModal
         visible={addWeightModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setAddWeightModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Registrar Peso</Text>
-              <TouchableOpacity onPress={() => setAddWeightModal(false)}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
+        onClose={() => {
+          setAddWeightModal(false);
+          setNewWeight('');
+        }}
+        weight={newWeight}
+        onWeightChange={setNewWeight}
+        onSave={handleAddWeight}
+        loading={loading}
+      />
 
-            <Text style={styles.modalLabel}>Peso actual (kg)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ej: 75.5"
-              keyboardType="decimal-pad"
-              value={newWeight}
-              onChangeText={setNewWeight}
-              autoFocus
-            />
-
-            <TouchableOpacity
-              style={styles.modalSaveBtn}
-              onPress={handleAddWeight}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.modalSaveBtnText}>Guardar</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* AI Analysis Modal */}
-      <Modal
+      <AIAnalysisModal
         visible={aiAnalysisModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setAiAnalysisModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
-            <View style={styles.modalHeader}>
-              <View style={styles.aiModalHeader}>
-                <Icon name="sparkles" size={24} color="#FF9800" />
-                <Text style={styles.modalTitle}>Análisis de Progreso</Text>
-              </View>
-              <TouchableOpacity onPress={() => setAiAnalysisModal(false)}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.aiAnalysisContent} showsVerticalScrollIndicator={false}>
-              {aiAnalysis ? (
-                <>
-                  <View style={styles.aiSection}>
-                    <Text style={styles.aiSectionTitle}>📊 Resumen</Text>
-                    <Text style={styles.aiText}>{aiAnalysis.analysis || 'Análisis no disponible'}</Text>
-                  </View>
-
-                  {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                    <View style={styles.aiSection}>
-                      <Text style={styles.aiSectionTitle}>💡 Recomendaciones</Text>
-                      {aiAnalysis.recommendations.map((rec, index) => (
-                        <View key={index} style={styles.recommendationItem}>
-                          <Icon name="checkmark-circle" size={16} color="#4CAF50" />
-                          <Text style={styles.recommendationText}>{rec}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  {aiAnalysis.insights && (
-                    <View style={styles.aiSection}>
-                      <Text style={styles.aiSectionTitle}>✨ Insights</Text>
-                      <Text style={styles.aiText}>{aiAnalysis.insights}</Text>
-                    </View>
-                  )}
-                </>
-              ) : (
-                <View style={styles.aiEmptyState}>
-                  <Icon name="analytics-outline" size={64} color="#ccc" />
-                  <Text style={styles.aiEmptyText}>No hay análisis disponible</Text>
-                </View>
-              )}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.modalSaveBtn}
-              onPress={() => setAiAnalysisModal(false)}
-            >
-              <Text style={styles.modalSaveBtnText}>Cerrar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setAiAnalysisModal(false)}
+        analysis={aiAnalysis}
+      />
     </SafeAreaView>
   );
 }
@@ -718,54 +632,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D5016',
-  },
-  modalLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  modalSaveBtn: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  modalSaveBtnText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   aiAnalysisCard: {
     backgroundColor: 'white',
     marginHorizontal: 20,
@@ -801,48 +667,5 @@ const styles = StyleSheet.create({
   aiAnalysisDesc: {
     fontSize: 13,
     color: '#666',
-  },
-  aiModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  aiAnalysisContent: {
-    padding: 20,
-  },
-  aiSection: {
-    marginBottom: 20,
-  },
-  aiSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2D5016',
-    marginBottom: 10,
-  },
-  aiText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 22,
-  },
-  recommendationItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-    gap: 8,
-  },
-  recommendationText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-  },
-  aiEmptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  aiEmptyText: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 15,
   },
 });
