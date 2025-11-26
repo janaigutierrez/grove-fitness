@@ -86,7 +86,6 @@ export default function AIWorkoutGeneratorModal({ visible, onClose, onWorkoutGen
         });
       }
     } catch (error) {
-      console.error('Error generating workout:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,

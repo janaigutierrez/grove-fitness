@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError } from '../utils/errorHandler';
+import logger from '../utils/logger';
 
 // ============ CONFIGURACIÓ ============
 const getBaseUrl = () => {
@@ -22,8 +23,8 @@ const getBaseUrl = () => {
 
 const BASE_URL = getBaseUrl();
 
-console.log('🌐 API URL:', BASE_URL);
-console.log('🌐 Environment:', process.env.EXPO_PUBLIC_ENV || 'development');
+logger.info('API URL:', BASE_URL);
+logger.info('Environment:', process.env.EXPO_PUBLIC_ENV || 'development');
 
 // ============ FUNCIÓ FETCH CENTRALITZADA ============
 const fetchWithAuth = async (endpoint, options = {}) => {
@@ -42,7 +43,7 @@ const fetchWithAuth = async (endpoint, options = {}) => {
     }
 
     try {
-        console.log(`📤 ${options.method || 'GET'} ${url}`);
+        logger.api.request(options.method || 'GET', url);
 
         const response = await fetch(url, {
             ...options,
@@ -50,7 +51,7 @@ const fetchWithAuth = async (endpoint, options = {}) => {
         });
 
         const data = await response.json();
-        console.log(`📥 Response (${response.status}):`, data);
+        logger.api.response(response.status, data);
 
         if (!response.ok) {
             // Si és 401 (no autoritzat) i no estem en login/register
@@ -71,7 +72,7 @@ const fetchWithAuth = async (endpoint, options = {}) => {
         return data;
 
     } catch (error) {
-        console.error('❌ Error en fetch:', error);
+        logger.api.error(error);
 
         if (error instanceof ApiError) {
             throw error;
@@ -124,7 +125,7 @@ export const logout = async () => {
             method: 'POST'
         });
     } catch (error) {
-        console.log('Error en logout del servidor, però netejant local');
+        logger.warn('Error en logout del servidor, però netejant local');
     } finally {
         await AsyncStorage.removeItem('token');
         await AsyncStorage.removeItem('user');

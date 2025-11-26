@@ -192,7 +192,6 @@ export default function OnboardingScreen({ route, onComplete }) {
         }
       });
     } catch (error) {
-      console.error('Error saving preferences:', error);
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: 'Error',
