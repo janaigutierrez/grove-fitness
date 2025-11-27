@@ -56,10 +56,9 @@ const fetchWithAuth = async (endpoint, options = {}) => {
         if (!response.ok) {
             // Si és 401 (no autoritzat) i no estem en login/register
             if (response.status === 401 && !endpoint.includes('/auth/')) {
-                // Netejar sessió i forçar logout
-                await AsyncStorage.removeItem('token');
-                await AsyncStorage.removeItem('user');
-                // Aquí podriesemitir un event per redirigir a login
+                // Only clear token, don't clear user (let AppNavigator handle logout)
+                // This prevents getting stuck in a half-logged-in state
+                logger.warn('401 Unauthorized - token may be invalid or expired');
             }
 
             throw new ApiError(
