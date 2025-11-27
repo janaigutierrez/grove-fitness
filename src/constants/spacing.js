@@ -35,6 +35,19 @@ export default {
     round: 999,
   },
 
+  // Component-specific spacing
+  button: {
+    radius: 12,
+    padding: 16,
+    minHeight: 48,
+  },
+
+  card: {
+    radius: 12,
+    padding: 16,
+    margin: 16,
+  },
+
   iconSize: {
     xs: 16,
     sm: 20,
