@@ -35,6 +35,7 @@ export default function ChangeUsernameModal({
           </View>
 
           <FormInput
+            label="Nombre de usuario"
             placeholder="Nuevo nombre de usuario"
             value={username}
             onChangeText={onUsernameChange}

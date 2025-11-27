@@ -132,7 +132,7 @@ export default function AIChatScreen() {
     switch (personality) {
       case 'motivador':
         return 'flame';
-      case 'analítico':
+      case 'analitico':
         return 'analytics';
       case 'bestia':
         return 'fitness';
@@ -148,7 +148,7 @@ export default function AIChatScreen() {
     switch (personality) {
       case 'motivador':
         return '#ff6b6b';
-      case 'analítico':
+      case 'analitico':
         return '#4A90E2';
       case 'bestia':
         return colors.primaryDark;
@@ -329,9 +329,9 @@ export default function AIChatScreen() {
                 <TouchableOpacity
                   style={[
                     styles.personalityCard,
-                    user?.ai_personality_type === 'analítico' && styles.personalityCardActive
+                    user?.ai_personality_type === 'analitico' && styles.personalityCardActive
                   ]}
-                  onPress={() => handleChangePersonality('analítico')}
+                  onPress={() => handleChangePersonality('analitico')}
                   disabled={changingPersonality}
                 >
                   <View style={[styles.personalityIcon, { backgroundColor: '#4A90E2' }]}>
@@ -343,7 +343,7 @@ export default function AIChatScreen() {
                       Basado en datos y ciencia. Te da información precisa y detallada.
                     </Text>
                   </View>
-                  {user?.ai_personality_type === 'analítico' && (
+                  {user?.ai_personality_type === 'analitico' && (
                     <Icon name="checkmark-circle" size={24} color="#4CAF50" />
                   )}
                 </TouchableOpacity>
