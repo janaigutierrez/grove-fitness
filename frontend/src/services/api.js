@@ -287,6 +287,12 @@ export const generateAIWorkout = async (prompt, saveToLibrary = true) => {
     });
 };
 
+export const generateStarterWorkout = async () => {
+    return fetchWithAuth('/ai/generate-starter-workout', {
+        method: 'POST'
+    });
+};
+
 export const analyzeProgress = async () => {
     return fetchWithAuth('/ai/analyze-progress');
 };

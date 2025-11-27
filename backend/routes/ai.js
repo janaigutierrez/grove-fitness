@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     chat,
     generateWorkout,
+    generateStarterWorkout,
     analyzeProgress,
     askQuestion,
     changePersonality,
@@ -15,6 +16,9 @@ router.post('/chat', auth, chat);
 
 // @route   POST /api/ai/generate-workout
 router.post('/generate-workout', auth, generateWorkout);
+
+// @route   POST /api/ai/generate-starter-workout
+router.post('/generate-starter-workout', auth, generateStarterWorkout);
 
 // @route   GET /api/ai/analyze-progress
 router.get('/analyze-progress', auth, analyzeProgress);

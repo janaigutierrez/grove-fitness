@@ -58,9 +58,19 @@ const clearHistory = async (req, res, next) => {
     }
 };
 
+const generateStarterWorkout = async (req, res, next) => {
+    try {
+        const result = await aiService.generateStarterWorkout(req.user._id);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     chat,
     generateWorkout,
+    generateStarterWorkout,
     analyzeProgress,
     askQuestion,
     changePersonality,

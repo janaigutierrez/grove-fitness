@@ -365,9 +365,87 @@ const clearChatHistory = async (userId) => {
     };
 };
 
+// Generate starter workout based on onboarding preferences
+const generateStarterWorkout = async (userId) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const preferences = {
+        fitness_level: user.fitness_level || 'principiante',
+        available_equipment: user.available_equipment || ['ninguno'],
+        workout_location: user.workout_location || 'casa',
+        time_per_session: user.time_per_session || 30,
+        days_per_week: user.days_per_week || 3,
+        goals: user.goals || []
+    };
+
+    // Use AI to generate a personalized starter workout
+    const prompt = `Crea un workout inicial perfecto para un usuario con estas características:
+- Nivel: ${preferences.fitness_level}
+- Equipo disponible: ${preferences.available_equipment.join(', ')}
+- Lugar: ${preferences.workout_location}
+- Tiempo disponible: ${preferences.time_per_session} minutos
+- Días por semana: ${preferences.days_per_week}
+- Objetivos: ${preferences.goals.join(', ') || 'Fitness general'}
+
+Crea un workout balanceado y efectivo con:
+- Nombre atractivo y motivador
+- Descripción breve
+- 4-6 ejercicios apropiados para su nivel
+- Series y repeticiones adecuadas
+- Tiempos de descanso
+
+Responde SOLO con JSON en este formato exacto:
+{
+  "name": "nombre del workout",
+  "description": "descripción breve",
+  "exercises": [
+    {"name": "nombre ejercicio", "sets": 3, "reps": 10, "rest": 60, "category": "chest"}
+  ]
+}`;
+
+    const response = await groqService.chat(prompt, [], 'motivador', {});
+
+    if (!response.success) {
+        const error = new Error('Failed to generate starter workout');
+        error.statusCode = 500;
+        throw error;
+    }
+
+    // Parse AI response
+    try {
+        const workoutData = JSON.parse(response.reply);
+        return {
+            workout: workoutData,
+            preferences: preferences
+        };
+    } catch (parseError) {
+        // Fallback to default workout if AI response isn't valid JSON
+        return {
+            workout: {
+                name: "Tu Primer Entrenamiento",
+                description: "Un workout perfecto para empezar tu viaje fitness",
+                exercises: [
+                    { name: "Squats", sets: 3, reps: 12, rest: 60, category: "legs" },
+                    { name: "Push-ups", sets: 3, reps: 10, rest: 60, category: "chest" },
+                    { name: "Plank", sets: 3, reps: 30, rest: 45, category: "core" },
+                    { name: "Lunges", sets: 3, reps: 10, rest: 60, category: "legs" }
+                ]
+            },
+            preferences: preferences
+        };
+    }
+};
+
 module.exports = {
     chatWithAI,
     generateAIWorkout,
+    generateStarterWorkout,
     analyzeUserProgress,
     answerFitnessQuestion,
     changePersonality,
