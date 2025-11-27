@@ -29,6 +29,7 @@ import ConfirmModal from '../components/common/ConfirmModal';
 import InfoModal from '../components/common/InfoModal';
 import ErrorModal from '../components/common/ErrorModal';
 import useModal from '../hooks/useModal';
+import colors from '../constants/colors';
 
 export default function ProfileScreen({ navigation, onLogout }) {
   const [user, setUser] = useState(null);
