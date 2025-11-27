@@ -331,7 +331,11 @@ export default function WorkoutScreen({ user }) {
         buttonText: '🚀 GENIAL!',
         onClose: () => {
           infoModal.closeModal();
+          // Reset all workout states
           setModalVisible(false);
+          setCurrentSessionId(null);
+          setSelectedWorkout(null);
+          setCompletedSets([]);
           loadWorkoutData();
         }
       });

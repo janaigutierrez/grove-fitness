@@ -37,7 +37,10 @@ export default function ActiveWorkoutScreen({
   const weight = exercise?.custom_weight;
   const restDuration = exercise?.custom_rest_seconds || exercise?.exercise_id?.default_rest_seconds || 60;
 
-  const nextExercise = workout?.exercises?.[currentExercise + 1];
+  // During rest, show current exercise (already incremented). During active exercise, show next exercise.
+  const nextExercise = restTimer > 0
+    ? workout?.exercises?.[currentExercise]
+    : workout?.exercises?.[currentExercise + 1];
   const totalExercises = workout?.exercises?.length || 0;
   const progressPercentage = totalExercises > 0
     ? Math.round(((currentExercise + (currentSet / totalSets)) / totalExercises) * 100)
