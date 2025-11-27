@@ -226,6 +226,19 @@ export const createExercise = async (exerciseData) => {
     });
 };
 
+export const updateExercise = async (exerciseId, exerciseData) => {
+    return fetchWithAuth(`/exercises/${exerciseId}`, {
+        method: 'PUT',
+        body: JSON.stringify(exerciseData)
+    });
+};
+
+export const deleteExercise = async (exerciseId) => {
+    return fetchWithAuth(`/exercises/${exerciseId}`, {
+        method: 'DELETE'
+    });
+};
+
 // ============ USER ============
 export const getUserStats = async () => {
     return fetchWithAuth('/users/stats');
