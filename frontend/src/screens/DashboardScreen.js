@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, ImageBackground, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import ProgressBar from '../components/common/ProgressBar';
@@ -12,6 +13,7 @@ import useModal from '../hooks/useModal';
 import colors from '../constants/colors';
 
 export default function DashboardScreen({ user }) {
+  const isFocused = useIsFocused();
   const [stats, setStats] = useState(null);
   const [todayWorkout, setTodayWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,6 +26,13 @@ export default function DashboardScreen({ user }) {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Reload data when screen comes into focus
+  useEffect(() => {
+    if (isFocused) {
+      loadDashboardData();
+    }
+  }, [isFocused]);
 
   const loadDashboardData = async () => {
     try {
