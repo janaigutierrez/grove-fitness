@@ -37,7 +37,10 @@ export default function ActiveWorkoutScreen({
   const weight = exercise?.custom_weight;
   const restDuration = exercise?.custom_rest_seconds || exercise?.exercise_id?.default_rest_seconds || 60;
 
-  const nextExercise = workout?.exercises?.[currentExercise + 1];
+  // During rest, show current exercise (already incremented). During active exercise, show next exercise.
+  const nextExercise = restTimer > 0
+    ? workout?.exercises?.[currentExercise]
+    : workout?.exercises?.[currentExercise + 1];
   const totalExercises = workout?.exercises?.length || 0;
   const progressPercentage = totalExercises > 0
     ? Math.round(((currentExercise + (currentSet / totalSets)) / totalExercises) * 100)
@@ -69,6 +72,12 @@ export default function ActiveWorkoutScreen({
     }
     return () => clearInterval(interval);
   }, [isPaused]);
+
+  // Calculate total sets completed across all exercises
+  const totalSetsCompleted = completedSets.length;
+  const totalSetsInWorkout = workout?.exercises?.reduce((sum, ex) => {
+    return sum + (ex.custom_sets || ex.exercise_id?.default_sets || 3);
+  }, 0) || 0;
 
   const handleCompleteSet = () => {
     const newCompletedSet = {
@@ -230,51 +239,49 @@ export default function ActiveWorkoutScreen({
             </View>
           )}
 
-          {/* Progress Bar */}
+          {/* Progress Bar - Segmented */}
           <View style={styles.progressContainer}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressLabel}>Workout Progress</Text>
-              <Text style={styles.progressPercentage}>{progressPercentage}%</Text>
+              <Text style={styles.sessionTimer}>{formatTime(totalElapsedTime)}</Text>
             </View>
-            <View style={styles.progressBarContainer}>
-              <View
-                style={[styles.progressBarFill, { width: `${progressPercentage}%` }]}
-              />
+            <View style={styles.segmentedProgressBar}>
+              {Array.from({ length: totalSetsInWorkout }).map((_, idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    styles.progressSegment,
+                    idx < totalSetsCompleted && styles.progressSegmentCompleted,
+                  ]}
+                />
+              ))}
             </View>
-            <View style={styles.progressStats}>
-              <Text style={styles.progressStat}>
-                <Icon name="time-outline" size={14} color={colors.overlay.white30} />
-                {' '}{formatTime(totalElapsedTime)}
-              </Text>
-              <Text style={styles.progressStat}>
-                {completedSets.length} sets completed
-              </Text>
-            </View>
+            <Text style={styles.progressText}>
+              {totalSetsCompleted} / {totalSetsInWorkout} sets
+            </Text>
           </View>
         </ScrollView>
 
-        {/* Bottom Actions */}
+        {/* Bottom Actions - Big Central Button */}
         <View style={styles.bottomActions}>
           {restTimer > 0 ? (
-            <>
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.secondaryButton,
-                  isPaused && styles.actionButtonDisabled
-                ]}
-                onPress={handleSkipRest}
-                disabled={isPaused}
-              >
-                <Icon name="play-skip-forward" size={20} color={colors.text.inverse} />
-                <Text style={styles.actionButtonText}>Skip Rest</Text>
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              style={[
+                styles.bigActionButton,
+                styles.skipRestButton,
+                isPaused && styles.actionButtonDisabled
+              ]}
+              onPress={handleSkipRest}
+              disabled={isPaused}
+            >
+              <Icon name="play-skip-forward" size={28} color={colors.text.inverse} />
+              <Text style={styles.bigActionButtonText}>Skip Rest</Text>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={[
-                styles.actionButton,
-                styles.primaryButton,
+                styles.bigActionButton,
+                styles.completeSetButton,
                 isPaused && styles.actionButtonDisabled
               ]}
               onPress={handleCompleteSet}
@@ -282,10 +289,10 @@ export default function ActiveWorkoutScreen({
             >
               <Icon
                 name={currentExercise >= totalExercises - 1 && currentSet >= totalSets ? "checkmark-circle" : "checkmark"}
-                size={20}
+                size={32}
                 color={colors.text.inverse}
               />
-              <Text style={styles.actionButtonText}>{getButtonText()}</Text>
+              <Text style={styles.bigActionButtonText}>{getButtonText()}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -465,61 +472,68 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   progressLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.text.inverse,
   },
-  progressPercentage: {
-    fontSize: 18,
+  sessionTimer: {
+    fontSize: 24,
     fontWeight: 'bold',
-    color: colors.text.inverse,
+    color: colors.secondary,
+    letterSpacing: 1,
   },
-  progressBarContainer: {
+  segmentedProgressBar: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: spacing.sm,
+  },
+  progressSegment: {
+    flex: 1,
     height: 8,
     backgroundColor: colors.overlay.white20,
     borderRadius: 4,
-    overflow: 'hidden',
   },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
+  progressSegmentCompleted: {
+    backgroundColor: colors.secondary,
   },
-  progressStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-  },
-  progressStat: {
-    fontSize: 12,
+  progressText: {
+    fontSize: 13,
     color: colors.overlay.white30,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   bottomActions: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.md,
   },
-  actionButton: {
+  bigActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: spacing.button.radius,
-    gap: spacing.sm,
+    paddingVertical: spacing.xl,
+    borderRadius: spacing.borderRadius.large,
+    gap: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  primaryButton: {
+  completeSetButton: {
     backgroundColor: colors.text.inverse,
   },
-  secondaryButton: {
-    backgroundColor: colors.overlay.white20,
+  skipRestButton: {
+    backgroundColor: colors.secondary,
   },
-  actionButtonText: {
-    fontSize: 16,
+  bigActionButtonText: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.primaryDark,
+    letterSpacing: 0.5,
   },
   actionButtonDisabled: {
     opacity: 0.5,

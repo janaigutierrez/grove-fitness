@@ -39,13 +39,16 @@ const getWeeklySchedule = async (userId) => {
 
 // Actualizar calendario semanal
 const updateWeeklySchedule = async (userId, scheduleData) => {
-    // Validar que los workout IDs existen y pertenecen al usuario
-    const workoutIds = Object.values(scheduleData).filter(id => id !== null);
+    // Validar que los workout IDs existen (tanto propios como templates)
+    const workoutIds = Object.values(scheduleData.weekly_schedule || scheduleData).filter(id => id !== null);
 
     if (workoutIds.length > 0) {
         const workouts = await Workout.find({
             _id: { $in: workoutIds },
-            user_id: userId
+            $or: [
+                { user_id: userId },
+                { is_template: true }
+            ]
         });
 
         if (workouts.length !== workoutIds.length) {
@@ -55,10 +58,11 @@ const updateWeeklySchedule = async (userId, scheduleData) => {
         }
     }
 
-    // Actualizar el calendario
+    // Actualizar el calendario (handle both data formats)
+    const scheduleToSave = scheduleData.weekly_schedule || scheduleData;
     const user = await User.findByIdAndUpdate(
         userId,
-        { $set: { weekly_schedule: scheduleData } },
+        { $set: { weekly_schedule: scheduleToSave } },
         { new: true }
     )
         .populate('weekly_schedule.monday')

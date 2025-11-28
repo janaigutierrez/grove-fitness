@@ -56,10 +56,9 @@ const fetchWithAuth = async (endpoint, options = {}) => {
         if (!response.ok) {
             // Si és 401 (no autoritzat) i no estem en login/register
             if (response.status === 401 && !endpoint.includes('/auth/')) {
-                // Netejar sessió i forçar logout
-                await AsyncStorage.removeItem('token');
-                await AsyncStorage.removeItem('user');
-                // Aquí podriesemitir un event per redirigir a login
+                // Only clear token, don't clear user (let AppNavigator handle logout)
+                // This prevents getting stuck in a half-logged-in state
+                logger.warn('401 Unauthorized - token may be invalid or expired');
             }
 
             throw new ApiError(
@@ -226,6 +225,19 @@ export const createExercise = async (exerciseData) => {
     });
 };
 
+export const updateExercise = async (exerciseId, exerciseData) => {
+    return fetchWithAuth(`/exercises/${exerciseId}`, {
+        method: 'PUT',
+        body: JSON.stringify(exerciseData)
+    });
+};
+
+export const deleteExercise = async (exerciseId) => {
+    return fetchWithAuth(`/exercises/${exerciseId}`, {
+        method: 'DELETE'
+    });
+};
+
 // ============ USER ============
 export const getUserStats = async () => {
     return fetchWithAuth('/users/stats');
@@ -272,6 +284,12 @@ export const generateAIWorkout = async (prompt, saveToLibrary = true) => {
     return fetchWithAuth('/ai/generate-workout', {
         method: 'POST',
         body: JSON.stringify({ prompt, save_to_library: saveToLibrary })
+    });
+};
+
+export const generateStarterWorkout = async () => {
+    return fetchWithAuth('/ai/generate-starter-workout', {
+        method: 'POST'
     });
 };
 

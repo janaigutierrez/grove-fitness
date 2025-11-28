@@ -110,7 +110,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -245,7 +245,10 @@ export default function ProfileScreen({ navigation, onLogout }) {
         title: 'Éxito',
         message: 'Contraseña cambiada. Por favor inicia sesión nuevamente',
         buttonText: 'Cerrar sesión',
-        onClose: handleLogout,
+        onClose: async () => {
+          infoModal.closeModal();
+          await doLogout();
+        },
       });
     } catch (error) {
       errorModal.openModal({
@@ -256,6 +259,15 @@ export default function ProfileScreen({ navigation, onLogout }) {
     }
   };
 
+  const doLogout = async () => {
+    try {
+      await logout();
+      if (onLogout) onLogout();
+    } catch (error) {
+      // Ignore logout errors, user will be logged out anyway
+    }
+  };
+
   const handleLogout = async () => {
     confirmModal.openModal({
       title: 'Cerrar sesión',
@@ -263,12 +275,8 @@ export default function ProfileScreen({ navigation, onLogout }) {
       confirmText: 'Salir',
       variant: 'danger',
       onConfirm: async () => {
-        try {
-          confirmModal.closeModal();
-          await logout();
-          if (onLogout) onLogout();
-        } catch (error) {
-        }
+        confirmModal.closeModal();
+        await doLogout();
       },
     });
   };

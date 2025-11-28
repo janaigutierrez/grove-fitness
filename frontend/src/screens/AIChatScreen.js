@@ -132,7 +132,7 @@ export default function AIChatScreen() {
     switch (personality) {
       case 'motivador':
         return 'flame';
-      case 'analítico':
+      case 'analitico':
         return 'analytics';
       case 'bestia':
         return 'fitness';
@@ -148,7 +148,7 @@ export default function AIChatScreen() {
     switch (personality) {
       case 'motivador':
         return '#ff6b6b';
-      case 'analítico':
+      case 'analitico':
         return '#4A90E2';
       case 'bestia':
         return colors.primaryDark;
@@ -329,9 +329,9 @@ export default function AIChatScreen() {
                 <TouchableOpacity
                   style={[
                     styles.personalityCard,
-                    user?.ai_personality_type === 'analítico' && styles.personalityCardActive
+                    user?.ai_personality_type === 'analitico' && styles.personalityCardActive
                   ]}
-                  onPress={() => handleChangePersonality('analítico')}
+                  onPress={() => handleChangePersonality('analitico')}
                   disabled={changingPersonality}
                 >
                   <View style={[styles.personalityIcon, { backgroundColor: '#4A90E2' }]}>
@@ -343,7 +343,7 @@ export default function AIChatScreen() {
                       Basado en datos y ciencia. Te da información precisa y detallada.
                     </Text>
                   </View>
-                  {user?.ai_personality_type === 'analítico' && (
+                  {user?.ai_personality_type === 'analitico' && (
                     <Icon name="checkmark-circle" size={24} color="#4CAF50" />
                   )}
                 </TouchableOpacity>
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: colors.background.main,
+    backgroundColor: colors.background.lightCream,
   },
   messagesContent: {
     padding: 15,
@@ -502,11 +502,13 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   aiBubble: {
-    backgroundColor: colors.text.inverse,
+    backgroundColor: colors.background.cream,
     borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.background.beige,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
@@ -545,14 +547,16 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     padding: 10,
-    backgroundColor: colors.text.inverse,
+    backgroundColor: colors.background.cream,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.background.beige,
     alignItems: 'flex-end',
   },
   input: {
     flex: 1,
-    backgroundColor: colors.background.main,
+    backgroundColor: colors.text.inverse,
+    borderWidth: 1,
+    borderColor: colors.background.beige,
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 10,

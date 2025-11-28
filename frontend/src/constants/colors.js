@@ -29,6 +29,10 @@ export default {
     card: '#FFFFFF',
     overlay: 'rgba(0, 0, 0, 0.5)',
     overlayLight: 'rgba(0, 0, 0, 0.3)',
+    // Pastel cream/beige for AI chat
+    cream: '#F5F3EF',
+    lightCream: '#FAF9F7',
+    beige: '#E8E6E1',
   },
 
   // Timer colors (for countdown states)

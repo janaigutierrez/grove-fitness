@@ -154,12 +154,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingTop: 10, // Reduced from paddingVertical to give more space
+    paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.2)',
   },
   closeButton: {
     marginRight: 15,
+    padding: 8, // Increase touch area
+    margin: -8, // Negative margin to maintain visual spacing
   },
   createModalTitle: {
     fontSize: 22,
