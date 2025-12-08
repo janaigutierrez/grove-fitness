@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const WorkoutSession = require('../models/WorkoutSession');
 const Exercise = require('../models/Exercise');
@@ -110,11 +111,40 @@ const getStats = async (userId) => {
         }
     }
 
+    // Calculate total reps and weight lifted across all sessions
+    const volumeStats = await WorkoutSession.aggregate([
+        {
+            $match: {
+                user_id: new mongoose.Types.ObjectId(userId),
+                completed: true,
+                abandoned: { $ne: true }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalReps: { $sum: '$total_reps' },
+                totalWeight: { $sum: '$total_volume_kg' }
+            }
+        }
+    ]);
+
+    const totalRepsCompleted = volumeStats.length > 0 ? (volumeStats[0].totalReps || 0) : 0;
+    const totalWeightLifted = volumeStats.length > 0 ? (volumeStats[0].totalWeight || 0) : 0;
+
+    // TODO: Calculate total distance and jumps when cardio tracking is implemented
+    const totalDistanceKm = 0;
+    const totalJumps = 0;
+
     return {
         totalWorkouts,
         totalExercises,
         thisWeekWorkouts,
         currentStreak: streak,
+        totalRepsCompleted,
+        totalWeightLifted,
+        totalDistanceKm,
+        totalJumps,
         recentSessions: transformedSessions
     };
 };
