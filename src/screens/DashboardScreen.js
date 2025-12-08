@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, ImageBackground, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Dumbbell, Flame, Calendar, TrendingUp, Target, BarChart2, CheckCircle, Clock, Play } from 'lucide-react-native';
 import ProgressBar from '../components/common/ProgressBar';
 import Header from '../components/common/Header';
 import { getUserStats, getTodayWorkout } from '../services/api';
@@ -81,39 +81,39 @@ export default function DashboardScreen({ user }) {
   const getMotivationalPhrase = () => {
     const phrases = {
       highStreak: [
-        `🔥 Increïble! ${stats?.currentStreak} dies consecutius entrenant. Ets imparable!`,
-        `💪 ${stats?.currentStreak} dies de ratxa! El teu cos t'ho agrairà.`,
-        `⚡ ${stats?.currentStreak} dies sense parar! La constància és la clau de l'èxit.`,
-        `🏆 ${stats?.currentStreak} dies seguint amb disciplina. Així s'aconsegueixen resultats!`,
+        `Increïble! ${stats?.currentStreak} dies consecutius entrenant. Ets imparable!`,
+        `${stats?.currentStreak} dies de ratxa! El teu cos t'ho agrairà.`,
+        `${stats?.currentStreak} dies sense parar! La constància és la clau de l'èxit.`,
+        `${stats?.currentStreak} dies seguint amb disciplina. Així s'aconsegueixen resultats!`,
       ],
       mediumStreak: [
-        `👏 ${stats?.currentStreak} dies de ratxa! Vas per bon camí, continua així!`,
-        `💚 ${stats?.currentStreak} dies amb determinació. Cada dia compta!`,
-        `🌟 Portes ${stats?.currentStreak} dies entrenant. El progrés és inevitable!`,
-        `🔋 ${stats?.currentStreak} dies carregant energia. Segueix endavant!`,
+        `${stats?.currentStreak} dies de ratxa! Vas per bon camí, continua així!`,
+        `${stats?.currentStreak} dies amb determinació. Cada dia compta!`,
+        `Portes ${stats?.currentStreak} dies entrenant. El progrés és inevitable!`,
+        `${stats?.currentStreak} dies carregant energia. Segueix endavant!`,
       ],
       lowStreak: [
-        `🌱 ${stats?.currentStreak} dies! Els petits hàbits creen grans resultats.`,
-        `🚀 ${stats?.currentStreak} dies i comptant. Cada començament és important!`,
-        `💫 ${stats?.currentStreak} dies d'esforç. El camí de mil milles comença amb un pas.`,
-        `🎯 ${stats?.currentStreak} dies cap al teu objectiu. Continua construint!`,
+        `${stats?.currentStreak} dies! Els petits hàbits creen grans resultats.`,
+        `${stats?.currentStreak} dies i comptant. Cada començament és important!`,
+        `${stats?.currentStreak} dies d'esforç. El camí de mil milles comença amb un pas.`,
+        `${stats?.currentStreak} dies cap al teu objectiu. Continua construint!`,
       ],
       noStreak: [
-        "🌱 Els petits hàbits creen grans resultats. Comença avui!",
-        "💪 El millor moment per començar és ara. El teu cos t'ho agrairà!",
-        "🔥 Cada expert va ser un principiant. Fes el primer pas!",
-        "⚡ La motivació és el que et posa en marxa, l'hàbit és el que et manté.",
-        "🎯 No cal ser gran per començar, però cal començar per ser gran.",
+        "Els petits hàbits creen grans resultats. Comença avui!",
+        "El millor moment per començar és ara. El teu cos t'ho agrairà!",
+        "Cada expert va ser un principiant. Fes el primer pas!",
+        "La motivació és el que et posa en marxa, l'hàbit és el que et manté.",
+        "No cal ser gran per començar, però cal començar per ser gran.",
       ],
       manyWorkouts: [
-        `🏆 ${stats?.totalWorkouts} workouts completats! Ets una màquina!`,
-        `💎 ${stats?.totalWorkouts} sessions a la butxaca. El treball dur paga!`,
-        `🔱 ${stats?.totalWorkouts} workouts i comptant. Imparable!`,
+        `${stats?.totalWorkouts} workouts completats! Ets una màquina!`,
+        `${stats?.totalWorkouts} sessions a la butxaca. El treball dur paga!`,
+        `${stats?.totalWorkouts} workouts i comptant. Imparable!`,
       ],
       thisWeek: [
-        `🔥 ${stats?.thisWeekWorkouts} workouts aquesta setmana! Quina consistència!`,
-        `⚡ Ja portes ${stats?.thisWeekWorkouts} sessions aquesta setmana. Fantàstic!`,
-        `💪 ${stats?.thisWeekWorkouts} workouts aquesta setmana. Així es fa!`,
+        `${stats?.thisWeekWorkouts} workouts aquesta setmana! Quina consistència!`,
+        `Ja portes ${stats?.thisWeekWorkouts} sessions aquesta setmana. Fantàstic!`,
+        `${stats?.thisWeekWorkouts} workouts aquesta setmana. Així es fa!`,
       ],
     };
 
@@ -197,7 +197,10 @@ export default function DashboardScreen({ user }) {
                 </View>
               )}
               <Text style={styles.username}>{user?.name || 'Grove User'}</Text>
-              <Text style={styles.level}>Nivell {userLevel} 🔥</Text>
+              <View style={styles.levelContainer}>
+                <Flame size={16} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.level}> Nivell {userLevel}</Text>
+              </View>
 
               {/* Barra de progrés del nivell */}
               <View style={styles.levelProgressContainer}>
@@ -211,7 +214,10 @@ export default function DashboardScreen({ user }) {
             {/* Estadístiques reals */}
             {stats && (
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>📊 Les teves estadístiques</Text>
+                <View style={styles.sectionTitleContainer}>
+                  <BarChart2 size={20} color="white" />
+                  <Text style={styles.sectionTitle}> Les teves estadístiques</Text>
+                </View>
 
                 <View style={styles.statsGrid}>
                   <View style={styles.statBox}>
@@ -236,22 +242,34 @@ export default function DashboardScreen({ user }) {
 
             {/* Workout d'avui */}
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>📅 Workout d'avui</Text>
+              <View style={styles.sectionTitleContainer}>
+                <Calendar size={20} color="white" />
+                <Text style={styles.sectionTitle}> Workout d'avui</Text>
+              </View>
               {todayWorkout?.workout ? (
                 <View>
                   <View style={styles.todayWorkoutHeader}>
-                    <Ionicons name="barbell" size={24} color="white" />
+                    <Dumbbell size={24} color="white" />
                     <Text style={styles.todayWorkoutTitle}>{todayWorkout.workout.name}</Text>
                   </View>
-                  <Text style={styles.todayWorkoutDetail}>
-                    ⏱ {todayWorkout.workout.estimated_duration || 30} minuts
-                  </Text>
-                  <Text style={styles.todayWorkoutDetail}>
-                    💪 {todayWorkout.workout.difficulty || 'intermediate'}
-                  </Text>
-                  <Text style={styles.todayWorkoutDetail}>
-                    🎯 {todayWorkout.workout.exercises?.length || 0} exercicis
-                  </Text>
+                  <View style={styles.todayWorkoutDetailRow}>
+                    <Clock size={16} color="rgba(255,255,255,0.9)" />
+                    <Text style={styles.todayWorkoutDetail}>
+                      {todayWorkout.workout.estimated_duration || 30} minuts
+                    </Text>
+                  </View>
+                  <View style={styles.todayWorkoutDetailRow}>
+                    <TrendingUp size={16} color="rgba(255,255,255,0.9)" />
+                    <Text style={styles.todayWorkoutDetail}>
+                      {todayWorkout.workout.difficulty || 'intermediate'}
+                    </Text>
+                  </View>
+                  <View style={styles.todayWorkoutDetailRow}>
+                    <Target size={16} color="rgba(255,255,255,0.9)" />
+                    <Text style={styles.todayWorkoutDetail}>
+                      {todayWorkout.workout.exercises?.length || 0} exercicis
+                    </Text>
+                  </View>
 
                   <TouchableOpacity
                     style={styles.startButton}
@@ -265,18 +283,18 @@ export default function DashboardScreen({ user }) {
                       });
                     }}
                   >
-                    <Ionicons name="play" size={18} color="white" />
+                    <Play size={18} color="white" fill="white" />
                     <Text style={styles.startButtonText}>COMENÇAR ENTRENO</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.noWorkout}>
-                  <Ionicons name="calendar-outline" size={48} color="rgba(255,255,255,0.5)" />
+                  <Calendar size={48} color="rgba(255,255,255,0.5)" />
                   <Text style={styles.noWorkoutText}>
                     {todayWorkout?.message || 'No tens cap workout programat per avui'}
                   </Text>
                   <Text style={styles.noWorkoutSubtext}>
-                    Dia de descans o crea un workout nou! 😊
+                    Dia de descans o crea un workout nou!
                   </Text>
                 </View>
               )}
@@ -285,11 +303,14 @@ export default function DashboardScreen({ user }) {
             {/* Sessions recents */}
             {stats?.recentSessions && stats.recentSessions.length > 0 && (
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>🏆 Sessions recents</Text>
+                <View style={styles.sectionTitleContainer}>
+                  <CheckCircle size={20} color="white" />
+                  <Text style={styles.sectionTitle}> Sessions recents</Text>
+                </View>
                 {stats.recentSessions.slice(0, 3).map((session, index) => (
                   <View key={index} style={styles.sessionItem}>
                     <View style={styles.sessionIcon}>
-                      <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                      <CheckCircle size={24} color="#4CAF50" />
                     </View>
                     <View style={styles.sessionInfo}>
                       <Text style={styles.sessionName}>
@@ -300,13 +321,19 @@ export default function DashboardScreen({ user }) {
                       </Text>
                     </View>
                     <View style={styles.sessionStats}>
-                      <Text style={styles.sessionDuration}>
-                        ⏱ {session.total_duration_minutes}min
-                      </Text>
-                      {session.total_volume_kg > 0 && (
-                        <Text style={styles.sessionVolume}>
-                          💪 {session.total_volume_kg}kg
+                      <View style={styles.sessionStatRow}>
+                        <Clock size={12} color="rgba(255,255,255,0.9)" />
+                        <Text style={styles.sessionDuration}>
+                          {session.total_duration_minutes}min
                         </Text>
+                      </View>
+                      {session.total_volume_kg > 0 && (
+                        <View style={styles.sessionStatRow}>
+                          <Dumbbell size={12} color="rgba(255,255,255,0.9)" />
+                          <Text style={styles.sessionVolume}>
+                            {session.total_volume_kg}kg
+                          </Text>
+                        </View>
                       )}
                     </View>
                   </View>
@@ -316,7 +343,10 @@ export default function DashboardScreen({ user }) {
 
             {/* Motivació */}
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>🔥 Motivació</Text>
+              <View style={styles.sectionTitleContainer}>
+                <Flame size={20} color="white" />
+                <Text style={styles.sectionTitle}> Motivació</Text>
+              </View>
               <Text style={styles.sectionText}>
                 {getMotivationalPhrase()}
               </Text>
@@ -382,10 +412,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text.inverse,
   },
+  levelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
   level: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
-    marginTop: 5,
   },
   levelProgressContainer: {
     width: '80%',
@@ -407,11 +441,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
   },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text.inverse,
-    marginBottom: 12,
   },
   sectionText: {
     fontSize: 14,
@@ -455,10 +493,15 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
     marginLeft: 10,
   },
+  todayWorkoutDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   todayWorkoutDetail: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.9)',
-    marginBottom: 6,
+    marginLeft: 6,
   },
   startButton: {
     flexDirection: 'row',
@@ -519,13 +562,19 @@ const styles = StyleSheet.create({
   sessionStats: {
     alignItems: 'flex-end',
   },
+  sessionStatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   sessionDuration: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.9)',
-    marginBottom: 2,
+    marginLeft: 4,
   },
   sessionVolume: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.9)',
+    marginLeft: 4,
   },
 });
