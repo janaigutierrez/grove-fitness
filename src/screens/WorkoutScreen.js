@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Dumbbell, Calendar, Play, Sparkles, Plus } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   getWorkouts,
@@ -221,7 +221,7 @@ export default function WorkoutScreen({ user }) {
 
       const successInfo = formatSuccessMessage(`El workout "${createdWorkout.name}" se ha creado correctamente`);
       infoModal.openModal({
-        title: '✅ Workout Creado!',
+        title: 'Workout Creado!',
         message: successInfo.message,
         icon: successInfo.icon,
         buttonText: 'Genial!',
@@ -289,7 +289,7 @@ export default function WorkoutScreen({ user }) {
         'success'
       );
       infoModal.openModal({
-        title: '🔥 SESIÓN INICIADA!',
+        title: 'SESIÓN INICIADA!',
         message: successInfo.message,
         icon: successInfo.icon,
         buttonText: '¡DALE!',
@@ -321,14 +321,14 @@ export default function WorkoutScreen({ user }) {
       setCompletionModalVisible(false);
 
       const successInfo = formatSuccessMessage(
-        `¡BRUTAL! Has acabado ${selectedWorkout.name}\n\n🔥 +1 hacia tus objetivos\n💪 Progresión registrada\n\n¡Un paso más cerca!`,
+        `¡BRUTAL! Has acabado ${selectedWorkout.name}\n\n+1 hacia tus objetivos\nProgresión registrada\n\n¡Un paso más cerca!`,
         'success'
       );
       infoModal.openModal({
-        title: '🎉 ENTRENAMIENTO COMPLETADO!',
+        title: 'ENTRENAMIENTO COMPLETADO!',
         message: successInfo.message,
         icon: successInfo.icon,
-        buttonText: '🚀 GENIAL!',
+        buttonText: 'GENIAL!',
         onClose: () => {
           infoModal.closeModal();
           // Reset all workout states
@@ -354,7 +354,7 @@ export default function WorkoutScreen({ user }) {
 
   const handleAbandonWorkout = () => {
     confirmModal.openModal({
-      title: '❌ Abandonar Entrenamiento',
+      title: 'Abandonar Entrenamiento',
       message: '¿Seguro que quieres parar? ¡Estás tan cerca!',
       confirmText: 'Abandonar',
       cancelText: 'Continuar',
@@ -439,14 +439,20 @@ export default function WorkoutScreen({ user }) {
               />
             }
           >
-            <Text style={styles.header}>🏋️‍♂️ Els teus Workouts</Text>
+            <View style={styles.headerContainer}>
+              <Dumbbell size={28} color="white" />
+              <Text style={styles.header}> Els teus Workouts</Text>
+            </View>
             <Text style={styles.subtitle}>
               {workouts.length} workouts disponibles
             </Text>
 
             {/* Calendari setmanal */}
             <View style={styles.weekContainer}>
-              <Text style={styles.weekTitle}>📅 Aquesta Setmana:</Text>
+              <View style={styles.weekTitleContainer}>
+                <Calendar size={18} color="white" />
+                <Text style={styles.weekTitle}> Aquesta Setmana</Text>
+              </View>
               <View style={styles.weekGrid}>
                 {getDaySchedule().map((item, index) => (
                   <TouchableOpacity
@@ -471,7 +477,7 @@ export default function WorkoutScreen({ user }) {
                       {item.workout ? item.workout.name.split(' - ')[1] || item.workout.name.substring(0, 8) : 'Rest'}
                     </Text>
                     {item.active && (
-                      <Ionicons name="play-circle" size={16} color="#4CAF50" />
+                      <Play size={16} color="#4CAF50" fill="#4CAF50" />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -479,7 +485,10 @@ export default function WorkoutScreen({ user }) {
             </View>
 
             {/* Llista de workouts */}
-            <Text style={styles.sectionTitle}>💪 Tots els Workouts:</Text>
+            <View style={styles.sectionTitleContainer}>
+              <Dumbbell size={20} color="white" />
+              <Text style={styles.sectionTitle}> Tots els Workouts</Text>
+            </View>
 
             {workouts.length === 0 ? (
               <EmptyState
@@ -503,7 +512,7 @@ export default function WorkoutScreen({ user }) {
             style={[styles.fabButton, styles.fabButtonSecondary]}
             onPress={() => setAiGeneratorVisible(true)}
           >
-            <Ionicons name="sparkles" size={28} color="white" />
+            <Sparkles size={28} color="white" />
           </TouchableOpacity>
 
           {/* BOTÓ FLOTANT PER CREAR WORKOUT */}
@@ -511,7 +520,7 @@ export default function WorkoutScreen({ user }) {
             style={styles.fabButton}
             onPress={handleOpenCreateModal}
           >
-            <Ionicons name="add" size={32} color="white" />
+            <Plus size={32} color="white" />
           </TouchableOpacity>
 
           {/* MODAL DE CREACIÓ DE WORKOUT */}
@@ -587,12 +596,16 @@ export default function WorkoutScreen({ user }) {
 const styles = StyleSheet.create({
   bg: { flex: 1 },
   container: { padding: 20, paddingBottom: 100 },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 5,
+  },
   header: {
     fontSize: 28,
     fontWeight: 'bold',
     color: colors.text.inverse,
-    marginBottom: 5,
-    marginTop: 10,
   },
   subtitle: {
     fontSize: 16,
@@ -605,11 +618,15 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 25,
   },
+  weekTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
   weekTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.text.inverse,
-    marginBottom: 15,
   },
   weekGrid: {
     flexDirection: 'row',
@@ -647,11 +664,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 4,
   },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.text.inverse,
-    marginBottom: 15,
   },
   noWorkouts: {
     backgroundColor: 'rgba(255,255,255,0.1)',
