@@ -9,7 +9,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Camera, Scale, Ruler, Calendar, Edit, AtSign, Lock, LogOut, User } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {
   getCurrentUser,
@@ -301,13 +301,6 @@ export default function ProfileScreen({ navigation, onLogout }) {
     );
   }
 
-  const displayStats = [
-    { label: 'Entrenamientos', value: stats?.total_workouts || 0 },
-    { label: 'Semanas activas', value: stats?.weeks_active || 0 },
-    { label: 'Peso actual', value: user?.weight ? `${user.weight}kg` : '-' },
-    { label: 'Edad', value: user?.age || '-' }
-  ];
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView
@@ -329,7 +322,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
               </View>
             )}
             <View style={styles.avatarEditBadge}>
-              <Icon name="camera" size={16} color="white" />
+              <Camera size={16} color="white" />
             </View>
           </TouchableOpacity>
 
@@ -344,31 +337,21 @@ export default function ProfileScreen({ navigation, onLogout }) {
           <Text style={styles.email}>{user?.email}</Text>
         </View>
 
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          {displayStats.map((stat, index) => (
-            <View key={index} style={styles.statCard}>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
-
         {/* Info Section */}
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>Información Física</Text>
           <View style={styles.infoRow}>
-            <Icon name="fitness" size={20} color="#666" />
+            <Scale size={20} color="#666" />
             <Text style={styles.infoLabel}>Peso:</Text>
             <Text style={styles.infoValue}>{user?.weight ? `${user.weight} kg` : '-'}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Icon name="resize" size={20} color="#666" />
+            <Ruler size={20} color="#666" />
             <Text style={styles.infoLabel}>Altura:</Text>
             <Text style={styles.infoValue}>{user?.height ? `${user.height} cm` : '-'}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Icon name="calendar" size={20} color="#666" />
+            <Calendar size={20} color="#666" />
             <Text style={styles.infoLabel}>Edad:</Text>
             <Text style={styles.infoValue}>{user?.age ? `${user.age} años` : '-'}</Text>
           </View>
@@ -563,36 +546,6 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   email: {
-    fontSize: 14,
-    color: colors.text.secondary,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  statCard: {
-    backgroundColor: colors.text.inverse,
-    width: '48%',
-    padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.primaryDark,
-    marginBottom: 5,
-  },
-  statLabel: {
     fontSize: 14,
     color: colors.text.secondary,
   },
