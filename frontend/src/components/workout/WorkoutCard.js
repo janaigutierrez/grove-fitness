@@ -1,35 +1,56 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Dumbbell, Clock, TrendingUp, Play, ChevronDown, ChevronUp } from 'lucide-react-native';
 
 export default function WorkoutCard({ workout, onStart }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <View style={styles.workoutCard}>
-      <View style={styles.cardHeader}>
-        <Ionicons name="barbell" size={22} color="#4CAF50" />
-        <Text style={styles.cardTitle}>{workout.name}</Text>
-      </View>
+      <TouchableOpacity
+        onPress={() => setIsExpanded(!isExpanded)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <Dumbbell size={22} color="#4CAF50" />
+          <Text style={styles.cardTitle}>{workout.name}</Text>
+          {isExpanded ? (
+            <ChevronUp size={20} color="#666" />
+          ) : (
+            <ChevronDown size={20} color="#666" />
+          )}
+        </View>
 
-      <View style={styles.badgesRow}>
-        <Text style={styles.badge}>
-          ⏱ {workout.estimated_duration || 30} min
-        </Text>
-        <Text style={styles.badge}>
-          🔥 {workout.difficulty || 'intermediate'}
-        </Text>
-        <Text style={styles.badge}>
-          {workout.exercises?.length || 0} exercicis
-        </Text>
-      </View>
+        <View style={styles.badgesRow}>
+          <View style={styles.badgeWithIcon}>
+            <Clock size={12} color="#4CAF50" />
+            <Text style={styles.badge}>
+              {workout.estimated_duration || 30} min
+            </Text>
+          </View>
+          <View style={styles.badgeWithIcon}>
+            <TrendingUp size={12} color="#4CAF50" />
+            <Text style={styles.badge}>
+              {workout.difficulty || 'intermediate'}
+            </Text>
+          </View>
+          <View style={styles.badgeWithIcon}>
+            <Dumbbell size={12} color="#4CAF50" />
+            <Text style={styles.badge}>
+              {workout.exercises?.length || 0} exercicis
+            </Text>
+          </View>
+        </View>
 
-      {workout.description && (
-        <Text style={styles.cardDescription}>{workout.description}</Text>
-      )}
+        {workout.description && (
+          <Text style={styles.cardDescription}>{workout.description}</Text>
+        )}
+      </TouchableOpacity>
 
-      {workout.exercises && workout.exercises.length > 0 && (
+      {isExpanded && workout.exercises && workout.exercises.length > 0 && (
         <View style={styles.exerciseList}>
           <Text style={styles.exerciseListTitle}>Exercicis:</Text>
-          {workout.exercises.slice(0, 3).map((ex, idx) => (
+          {workout.exercises.map((ex, idx) => (
             <View key={idx} style={styles.exerciseItem}>
               <Text style={styles.exerciseName}>
                 • {ex.exercise_id?.name || 'Exercici'}
@@ -40,11 +61,6 @@ export default function WorkoutCard({ workout, onStart }) {
               </Text>
             </View>
           ))}
-          {workout.exercises.length > 3 && (
-            <Text style={styles.moreExercises}>
-              +{workout.exercises.length - 3} més...
-            </Text>
-          )}
         </View>
       )}
 
@@ -52,7 +68,7 @@ export default function WorkoutCard({ workout, onStart }) {
         style={styles.cardButton}
         onPress={() => onStart(workout)}
       >
-        <Ionicons name="play" size={18} color="white" />
+        <Play size={18} color="white" fill="white" />
         <Text style={styles.cardButtonText}>COMENÇAR</Text>
       </TouchableOpacity>
     </View>
@@ -89,12 +105,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     flexWrap: 'wrap',
   },
-  badge: {
+  badgeWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#e8f5e9',
-    color: '#4CAF50',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    gap: 4,
+  },
+  badge: {
+    color: '#4CAF50',
     fontSize: 12,
     fontWeight: '500',
   },
@@ -130,12 +151,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontWeight: '600',
-  },
-  moreExercises: {
-    fontSize: 12,
-    color: '#4CAF50',
-    fontStyle: 'italic',
-    marginTop: 4,
   },
   cardButton: {
     backgroundColor: '#4CAF50',
