@@ -233,8 +233,8 @@ export default function DashboardScreen({ user }) {
                     <Text style={styles.statLabel}>Dies de ratxa</Text>
                   </View>
                   <View style={styles.statBox}>
-                    <Text style={styles.statNumber}>{stats.totalExercises}</Text>
-                    <Text style={styles.statLabel}>Exercicis</Text>
+                    <Text style={styles.statNumber}>{stats.totalRepsCompleted || 0}</Text>
+                    <Text style={styles.statLabel}>Reps totals</Text>
                   </View>
                 </View>
               </View>
