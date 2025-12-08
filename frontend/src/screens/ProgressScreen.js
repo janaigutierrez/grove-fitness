@@ -9,18 +9,16 @@ import {
   Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { TrendingUp, Dumbbell, Scale, PlusCircle, Activity, CheckCircle, Calendar } from 'lucide-react-native';
 import { LineChart } from 'react-native-chart-kit';
 import {
   getWeightHistory,
   addWeightEntry,
   getUserStats,
-  getWorkoutSessions,
-  analyzeProgress
+  getWorkoutSessions
 } from '../services/api';
 import { handleApiError, formatSuccessMessage, ValidationError } from '../utils/errorHandler';
 import AddWeightModal from '../components/progress/AddWeightModal';
-import AIAnalysisModal from '../components/progress/AIAnalysisModal';
 import ErrorModal from '../components/common/ErrorModal';
 import InfoModal from '../components/common/InfoModal';
 import useModal from '../hooks/useModal';
@@ -38,9 +36,6 @@ export default function ProgressScreen() {
   // Modal states
   const [addWeightModal, setAddWeightModal] = useState(false);
   const [newWeight, setNewWeight] = useState('');
-  const [aiAnalysisModal, setAiAnalysisModal] = useState(false);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
-  const [analyzingProgress, setAnalyzingProgress] = useState(false);
 
   // System modals
   const errorModal = useModal();
@@ -118,24 +113,6 @@ export default function ProgressScreen() {
     }
   };
 
-  const handleAnalyzeProgress = async () => {
-    try {
-      setAnalyzingProgress(true);
-      const analysis = await analyzeProgress();
-      setAiAnalysis(analysis);
-      setAiAnalysisModal(true);
-    } catch (error) {
-      const errorInfo = handleApiError(error);
-      errorModal.openModal({
-        title: errorInfo.title,
-        message: errorInfo.message,
-        icon: errorInfo.icon,
-      });
-    } finally {
-      setAnalyzingProgress(false);
-    }
-  };
-
   const getWeightChange = () => {
     if (weightHistory.length < 2) return null;
     const latest = weightHistory[0].weight;
@@ -200,12 +177,15 @@ export default function ProgressScreen() {
         onRefresh={handleRefresh}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>📈 Tu Progreso</Text>
+          <View style={styles.headerTitleContainer}>
+            <TrendingUp size={28} color={colors.primaryDark} />
+            <Text style={styles.title}> Tu Progreso</Text>
+          </View>
           <TouchableOpacity
             style={styles.addWeightBtn}
             onPress={() => setAddWeightModal(true)}
           >
-            <Icon name="add-circle" size={20} color={colors.text.inverse} />
+            <PlusCircle size={20} color={colors.text.inverse} />
             <Text style={styles.addWeightText}>Añadir Peso</Text>
           </TouchableOpacity>
         </View>
@@ -213,32 +193,25 @@ export default function ProgressScreen() {
         {/* Stats Cards */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Icon name="barbell" size={24} color={colors.primary} style={styles.statIcon} />
-            <Text style={styles.statValue}>{stats?.total_workouts || 0}</Text>
+            <Dumbbell size={24} color={colors.primary} style={styles.statIcon} />
+            <Text style={styles.statValue}>{stats?.totalWorkouts || 0}</Text>
             <Text style={styles.statLabel}>Entrenamientos</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Icon name="calendar" size={24} color={colors.primary} style={styles.statIcon} />
-            <Text style={styles.statValue}>{stats?.weeks_active || 0}</Text>
-            <Text style={styles.statLabel}>Semanas activas</Text>
+            <Activity size={24} color={colors.primary} style={styles.statIcon} />
+            <Text style={styles.statValue}>{stats?.totalRepsCompleted || 0}</Text>
+            <Text style={styles.statLabel}>Reps totals</Text>
           </View>
 
-          <TouchableOpacity
-            style={[styles.statCard, styles.weightCard]}
-            onPress={() => setAddWeightModal(true)}
-          >
-            <Icon name="fitness" size={24} color={colors.primary} style={styles.statIcon} />
+          <View style={styles.statCard}>
+            <Scale size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{currentWeight ? `${currentWeight}kg` : '-'}</Text>
             <Text style={styles.statLabel}>Peso actual</Text>
-            <View style={styles.addWeightHint}>
-              <Icon name="add" size={14} color={colors.primary} />
-              <Text style={styles.addWeightHintText}>Tap para añadir</Text>
-            </View>
-          </TouchableOpacity>
+          </View>
 
           <View style={styles.statCard}>
-            <Icon name="trending-up" size={24} color={weightChange >= 0 ? colors.primary : colors.danger} style={styles.statIcon} />
+            <TrendingUp size={24} color={weightChange >= 0 ? colors.primary : colors.danger} style={styles.statIcon} />
             <Text style={[
               styles.statValue,
               { color: weightChange >= 0 ? colors.primary : colors.danger }
@@ -247,29 +220,13 @@ export default function ProgressScreen() {
             </Text>
             <Text style={styles.statLabel}>Cambio de peso</Text>
           </View>
-        </View>
 
-        {/* AI Analysis Card */}
-        <TouchableOpacity
-          style={styles.aiAnalysisCard}
-          onPress={handleAnalyzeProgress}
-          disabled={analyzingProgress}
-        >
-          <View style={styles.aiAnalysisLeft}>
-            <Icon name="sparkles" size={32} color={colors.secondary} />
-            <View style={styles.aiAnalysisTextContainer}>
-              <Text style={styles.aiAnalysisTitle}>Análisis con IA</Text>
-              <Text style={styles.aiAnalysisDesc}>
-                Obtén insights personalizados sobre tu progreso
-              </Text>
-            </View>
+          <View style={styles.statCard}>
+            <Dumbbell size={24} color={colors.primary} style={styles.statIcon} />
+            <Text style={styles.statValue}>{stats?.totalWeightLifted ? `${Math.round(stats.totalWeightLifted)}kg` : '0kg'}</Text>
+            <Text style={styles.statLabel}>Peso total levantado</Text>
           </View>
-          {analyzingProgress ? (
-            <ActivityIndicator color={colors.secondary} />
-          ) : (
-            <Icon name="arrow-forward-circle" size={28} color={colors.secondary} />
-          )}
-        </TouchableOpacity>
+        </View>
 
         {/* Weight Chart */}
         {weightHistory.length > 0 ? (
@@ -301,7 +258,7 @@ export default function ProgressScreen() {
           </View>
         ) : (
           <View style={styles.emptyChartContainer}>
-            <Icon name="stats-chart-outline" size={48} color={colors.text.disabled} />
+            <TrendingUp size={48} color={colors.text.disabled} />
             <Text style={styles.emptyText}>No hay datos de peso</Text>
             <Text style={styles.emptySubtext}>Añade tu primer registro de peso</Text>
             <TouchableOpacity
@@ -329,7 +286,7 @@ export default function ProgressScreen() {
               return (
                 <View key={session._id || index} style={styles.activityItem}>
                   <View style={styles.activityIcon}>
-                    <Icon name="checkmark-circle" size={24} color={colors.primary} />
+                    <CheckCircle size={24} color={colors.primary} />
                   </View>
                   <View style={styles.activityContent}>
                     <Text style={styles.activityTitle}>{session.workout_id?.name || 'Entrenamiento'}</Text>
@@ -351,7 +308,7 @@ export default function ProgressScreen() {
             })
           ) : (
             <View style={styles.emptyActivity}>
-              <Icon name="barbell-outline" size={32} color={colors.text.disabled} />
+              <Dumbbell size={32} color={colors.text.disabled} />
               <Text style={styles.emptyActivityText}>No hay entrenamientos completados</Text>
             </View>
           )}
@@ -408,12 +365,6 @@ export default function ProgressScreen() {
         loading={loading}
       />
 
-      <AIAnalysisModal
-        visible={aiAnalysisModal}
-        onClose={() => setAiAnalysisModal(false)}
-        analysis={aiAnalysis}
-      />
-
       {/* System Modals */}
       <ErrorModal
         visible={errorModal.visible}
@@ -456,6 +407,10 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 10,
   },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -474,22 +429,6 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
     fontWeight: '600',
     fontSize: 14,
-  },
-  weightCard: {
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderStyle: 'dashed',
-  },
-  addWeightHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    gap: 2,
-  },
-  addWeightHintText: {
-    fontSize: 11,
-    color: colors.primary,
-    fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -679,41 +618,5 @@ const styles = StyleSheet.create({
   weightItemChange: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  aiAnalysisCard: {
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 20,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.secondary,
-  },
-  aiAnalysisLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 15,
-  },
-  aiAnalysisTextContainer: {
-    flex: 1,
-  },
-  aiAnalysisTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.primaryDark,
-    marginBottom: 4,
-  },
-  aiAnalysisDesc: {
-    fontSize: 13,
-    color: colors.text.secondary,
   },
 });
