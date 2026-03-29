@@ -16,24 +16,24 @@ export default function WorkoutCompletionModal({ visible, onComplete, onCancel, 
   const [mood, setMood] = useState('good');
 
   const rpeLabels = {
-    1: 'Muy fácil',
-    2: 'Fácil',
-    3: 'Moderado',
-    4: 'Algo difícil',
+    1: 'Molt fàcil',
+    2: 'Fàcil',
+    3: 'Moderat',
+    4: 'Una mica difícil',
     5: 'Difícil',
-    6: 'Muy difícil',
-    7: 'Extremo',
-    8: 'Casi máximo',
-    9: 'Máximo',
-    10: 'Imposible'
+    6: 'Molt difícil',
+    7: 'Extrem',
+    8: 'Quasi al màxim',
+    9: 'Màxim',
+    10: 'Impossible'
   };
 
   const moodOptions = [
-    { value: 'great', label: 'Excelente', icon: 'happy', color: '#4CAF50' },
-    { value: 'good', label: 'Bien', icon: 'happy-outline', color: '#8BC34A' },
+    { value: 'great', label: 'Excel·lent', icon: 'happy', color: '#4CAF50' },
+    { value: 'good', label: 'Bé', icon: 'happy-outline', color: '#8BC34A' },
     { value: 'ok', label: 'Normal', icon: 'remove-circle-outline', color: '#FFC107' },
-    { value: 'tired', label: 'Cansado', icon: 'sad-outline', color: '#FF9800' },
-    { value: 'exhausted', label: 'Agotado', icon: 'sad', color: '#f44336' }
+    { value: 'tired', label: 'Cansat', icon: 'sad-outline', color: '#FF9800' },
+    { value: 'exhausted', label: 'Esgotat', icon: 'sad', color: '#f44336' }
   ];
 
   const handleComplete = () => {
@@ -68,8 +68,8 @@ export default function WorkoutCompletionModal({ visible, onComplete, onCancel, 
           ))}
         </View>
         <View style={styles.scaleLabels}>
-          <Text style={styles.scaleLabel}>Bajo</Text>
-          <Text style={styles.scaleLabel}>Alto</Text>
+          <Text style={styles.scaleLabel}>Baix</Text>
+          <Text style={styles.scaleLabel}>Alt</Text>
         </View>
       </View>
     );
@@ -87,8 +87,8 @@ export default function WorkoutCompletionModal({ visible, onComplete, onCancel, 
           {/* Header */}
           <View style={styles.header}>
             <Icon name="trophy" size={32} color="#FFD700" />
-            <Text style={styles.title}>¡Entrenamiento Completado!</Text>
-            <Text style={styles.subtitle}>Cuéntanos cómo te fue</Text>
+            <Text style={styles.title}>Entrenament Completat!</Text>
+            <Text style={styles.subtitle}>Explica'ns com t'ha anat</Text>
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -96,9 +96,9 @@ export default function WorkoutCompletionModal({ visible, onComplete, onCancel, 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Icon name="speedometer" size={20} color="#4CAF50" />
-                <Text style={styles.sectionTitle}>Dificultad percibida (RPE)</Text>
+                <Text style={styles.sectionTitle}>Dificultat percebuda (RPE)</Text>
               </View>
-              <Text style={styles.sectionDesc}>¿Qué tan difícil fue el entrenamiento?</Text>
+              <Text style={styles.sectionDesc}>Quant de difícil ha estat l'entrenament?</Text>
               {renderScale(rpe, setRpe)}
               <Text style={styles.rpeLabel}>{rpeLabels[rpe]}</Text>
             </View>
@@ -107,9 +107,9 @@ export default function WorkoutCompletionModal({ visible, onComplete, onCancel, 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Icon name="flash" size={20} color="#FF9800" />
-                <Text style={styles.sectionTitle}>Nivel de energía</Text>
+                <Text style={styles.sectionTitle}>Nivell d'energia</Text>
               </View>
-              <Text style={styles.sectionDesc}>¿Cómo te sientes ahora?</Text>
+              <Text style={styles.sectionDesc}>Com et sents ara?</Text>
               {renderScale(energyLevel, setEnergyLevel)}
             </View>
 
@@ -117,9 +117,9 @@ export default function WorkoutCompletionModal({ visible, onComplete, onCancel, 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Icon name="heart" size={20} color="#E91E63" />
-                <Text style={styles.sectionTitle}>Estado de ánimo</Text>
+                <Text style={styles.sectionTitle}>Estat d'ànim</Text>
               </View>
-              <Text style={styles.sectionDesc}>¿Cómo te sientes después del entrenamiento?</Text>
+              <Text style={styles.sectionDesc}>Com et sents després de l'entrenament?</Text>
               <View style={styles.moodGrid}>
                 {moodOptions.map((option) => (
                   <TouchableOpacity
@@ -157,7 +157,7 @@ export default function WorkoutCompletionModal({ visible, onComplete, onCancel, 
               onPress={onCancel}
               disabled={loading}
             >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
+              <Text style={styles.cancelButtonText}>Cancel·lar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -171,6 +171,7 @@ export default function WorkoutCompletionModal({ visible, onComplete, onCancel, 
                 <>
                   <Icon name="checkmark-circle" size={20} color="white" />
                   <Text style={styles.completeButtonText}>Completar</Text>
+
                 </>
               )}
             </TouchableOpacity>

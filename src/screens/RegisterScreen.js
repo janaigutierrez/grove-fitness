@@ -16,9 +16,11 @@ import { handleApiError, ValidationError, formatSuccessMessage } from '../utils/
 import ErrorModal from '../components/common/ErrorModal';
 import InfoModal from '../components/common/InfoModal';
 import useModal from '../hooks/useModal';
+import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
 
-export default function RegisterScreen({ navigation, onLogin }) {
+export default function RegisterScreen({ navigation }) {
+    const { login: authLogin } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
         username: '',
@@ -40,7 +42,7 @@ export default function RegisterScreen({ navigation, onLogin }) {
     const handleRegister = async () => {
         // Validacions
         if (!formData.name || !formData.username || !formData.email || !formData.password) {
-            const validationError = new ValidationError('Por favor, completa todos los campos');
+            const validationError = new ValidationError('Si us plau, omple tots els camps');
             const errorInfo = handleApiError(validationError);
             errorModal.openModal({
                 title: errorInfo.title,
@@ -51,7 +53,7 @@ export default function RegisterScreen({ navigation, onLogin }) {
         }
 
         if (formData.username.length < 3) {
-            const validationError = new ValidationError('El nombre de usuario debe tener al menos 3 caracteres', 'username');
+            const validationError = new ValidationError('El nom d\'usuari ha de tenir almenys 3 caràcters', 'username');
             const errorInfo = handleApiError(validationError);
             errorModal.openModal({
                 title: errorInfo.title,
@@ -63,7 +65,7 @@ export default function RegisterScreen({ navigation, onLogin }) {
 
         if (!validateUsername(formData.username)) {
             const validationError = new ValidationError(
-                'El nombre de usuario solo puede contener letras, números, guiones (-) y guiones bajos (_)',
+                'El nom d\'usuari només pot contenir lletres, números, guions (-) i guions baixos (_)',
                 'username'
             );
             const errorInfo = handleApiError(validationError);
@@ -76,7 +78,7 @@ export default function RegisterScreen({ navigation, onLogin }) {
         }
 
         if (formData.password !== formData.confirmPassword) {
-            const validationError = new ValidationError('Las contraseñas no coinciden', 'password');
+            const validationError = new ValidationError('Les contrasenyes no coincideixen', 'password');
             const errorInfo = handleApiError(validationError);
             errorModal.openModal({
                 title: errorInfo.title,
@@ -87,7 +89,7 @@ export default function RegisterScreen({ navigation, onLogin }) {
         }
 
         if (formData.password.length < 6) {
-            const validationError = new ValidationError('La contraseña debe tener al menos 6 caracteres', 'password');
+            const validationError = new ValidationError('La contrasenya ha de tenir almenys 6 caràcters', 'password');
             const errorInfo = handleApiError(validationError);
             errorModal.openModal({
                 title: errorInfo.title,
@@ -110,20 +112,20 @@ export default function RegisterScreen({ navigation, onLogin }) {
             // Navegar a Onboarding
             if (response.accessToken && response.user) {
                 const successInfo = formatSuccessMessage(
-                    `Hola ${formData.name}! Tu cuenta se ha creado correctamente.\n\n¡Vamos a configurar tu perfil! 💪`,
+                    `Hola ${formData.name}! El teu compte s'ha creat correctament.\n\nAnem a configurar el teu perfil! 💪`,
                     'success'
                 );
                 infoModal.openModal({
-                    title: '🎉 Bienvenido a Grove!',
+                    title: '🎉 Benvingut a Grove!',
                     message: successInfo.message,
                     icon: successInfo.icon,
                     buttonText: 'Continuar',
                     onClose: () => {
                         infoModal.closeModal();
+                        authLogin(response.accessToken, response.user);
                         navigation.navigate('Onboarding', {
                             token: response.accessToken,
                             user: response.user,
-                            onComplete: onLogin
                         });
                     }
                 });
@@ -132,7 +134,7 @@ export default function RegisterScreen({ navigation, onLogin }) {
             const errorInfo = handleApiError(error);
             errorModal.openModal({
                 title: errorInfo.title,
-                message: errorInfo.message || 'Error al registrarse',
+                message: errorInfo.message || 'Error en registrar-se',
                 icon: errorInfo.icon,
             });
         } finally {

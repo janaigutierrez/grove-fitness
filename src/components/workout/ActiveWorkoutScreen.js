@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,41 +17,70 @@ import spacing from '../../constants/spacing';
 
 const { width } = Dimensions.get('window');
 
+// Format seconds to m:ss
+const formatTime = (seconds) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
 export default function ActiveWorkoutScreen({
   workout,
   sessionId,
   onComplete,
   onAbandon,
 }) {
+  const [started, setStarted] = useState(false);
   const [currentExercise, setCurrentExercise] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
   const [restTimer, setRestTimer] = useState(0);
+  const [exerciseTimer, setExerciseTimer] = useState(0); // for time-based exercises
+  const [exerciseTimerRunning, setExerciseTimerRunning] = useState(false);
   const [completedSets, setCompletedSets] = useState([]);
   const [totalElapsedTime, setTotalElapsedTime] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
   const exercise = workout?.exercises?.[currentExercise];
-  const totalSets = exercise?.custom_sets || exercise?.exercise_id?.default_sets || 3;
-  const reps = exercise?.custom_reps || exercise?.exercise_id?.default_reps || 10;
+  const exerciseInfo = exercise?.exercise_id;
+  const exerciseType = exerciseInfo?.type || 'reps'; // 'reps' | 'time' | 'cardio'
+  const totalSets = exercise?.custom_sets || exerciseInfo?.default_sets || 3;
+  const reps = exercise?.custom_reps || exerciseInfo?.default_reps || 10;
+  // For time-based exercises, reps is interpreted as seconds
+  const timeDuration = exercise?.custom_reps || exerciseInfo?.default_duration_seconds || exerciseInfo?.default_reps || 30;
   const weight = exercise?.custom_weight;
-  const restDuration = exercise?.custom_rest_seconds || exercise?.exercise_id?.default_rest_seconds || 60;
+  const restDuration = exercise?.custom_rest_seconds || exerciseInfo?.default_rest_seconds || 60;
 
-  // During rest, show current exercise (already incremented). During active exercise, show next exercise.
   const nextExercise = restTimer > 0
     ? workout?.exercises?.[currentExercise]
     : workout?.exercises?.[currentExercise + 1];
   const totalExercises = workout?.exercises?.length || 0;
-  const progressPercentage = totalExercises > 0
-    ? Math.round(((currentExercise + (currentSet / totalSets)) / totalExercises) * 100)
-    : 0;
 
-  // Timer de descanso
+  const totalSetsInWorkout = workout?.exercises?.reduce((sum, ex) => {
+    return sum + (ex.custom_sets || ex.exercise_id?.default_sets || 3);
+  }, 0) || 0;
+  const totalSetsCompleted = completedSets.length;
+
+  // Rest timer
   useEffect(() => {
+    if (!started || isPaused) return;
     let interval;
-    if (restTimer > 0 && !isPaused) {
+    if (restTimer > 0) {
       interval = setInterval(() => {
-        setRestTimer(prev => {
+        setRestTimer(prev => (prev <= 1 ? 0 : prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [restTimer, isPaused, started]);
+
+  // Exercise countdown timer (time-based exercises)
+  useEffect(() => {
+    if (!started || isPaused || !exerciseTimerRunning) return;
+    let interval;
+    if (exerciseTimer > 0) {
+      interval = setInterval(() => {
+        setExerciseTimer(prev => {
           if (prev <= 1) {
+            setExerciseTimerRunning(false);
             return 0;
           }
           return prev - 1;
@@ -60,24 +88,32 @@ export default function ActiveWorkoutScreen({
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [restTimer, isPaused]);
+  }, [exerciseTimer, isPaused, started, exerciseTimerRunning]);
 
   // Total elapsed time
   useEffect(() => {
-    let interval;
-    if (!isPaused) {
-      interval = setInterval(() => {
-        setTotalElapsedTime(prev => prev + 1);
-      }, 1000);
-    }
+    if (!started || isPaused) return;
+    const interval = setInterval(() => {
+      setTotalElapsedTime(prev => prev + 1);
+    }, 1000);
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, [isPaused, started]);
 
-  // Calculate total sets completed across all exercises
-  const totalSetsCompleted = completedSets.length;
-  const totalSetsInWorkout = workout?.exercises?.reduce((sum, ex) => {
-    return sum + (ex.custom_sets || ex.exercise_id?.default_sets || 3);
-  }, 0) || 0;
+  // When switching to a time-based exercise, initialize timer
+  useEffect(() => {
+    if (exerciseType === 'time' || exerciseType === 'cardio') {
+      setExerciseTimer(timeDuration);
+      setExerciseTimerRunning(false);
+    }
+  }, [currentExercise, currentSet]);
+
+  const handleStart = () => {
+    setStarted(true);
+  };
+
+  const handleStartExerciseTimer = () => {
+    setExerciseTimerRunning(true);
+  };
 
   const handleCompleteSet = () => {
     const newCompletedSet = {
@@ -85,164 +121,220 @@ export default function ActiveWorkoutScreen({
       set_number: currentSet,
       completed_at: new Date().toISOString(),
     };
+    const updatedSets = [...completedSets, newCompletedSet];
+    setCompletedSets(updatedSets);
 
-    setCompletedSets([...completedSets, newCompletedSet]);
-
-    // Si hay más series
     if (currentSet < totalSets) {
       setCurrentSet(currentSet + 1);
       setRestTimer(restDuration);
-    }
-    // Si hay más ejercicios
-    else if (currentExercise < totalExercises - 1) {
+    } else if (currentExercise < totalExercises - 1) {
       setCurrentExercise(currentExercise + 1);
       setCurrentSet(1);
-      setRestTimer(120); // 2 minutes rest between exercises
-    }
-    // Workout completado
-    else {
-      onComplete([...completedSets, newCompletedSet]);
+      setRestTimer(120);
+    } else {
+      onComplete(updatedSets);
     }
   };
 
-  const handleSkipRest = () => {
-    setRestTimer(0);
+  const getButtonLabel = () => {
+    if (restTimer > 0) return null; // handled separately
+    if (currentSet < totalSets) return `Sèrie completada`;
+    if (currentExercise < totalExercises - 1) return 'Exercici següent';
+    return 'Acabar entrenament';
   };
 
-  const handleAddTime = () => {
-    setRestTimer(prev => prev + 15);
-  };
+  const isLastAction = currentExercise >= totalExercises - 1 && currentSet >= totalSets;
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  // ── READY SCREEN ──────────────────────────────────────────
+  if (!started) {
+    return (
+      <LinearGradient colors={[colors.primaryDark, colors.primary]} style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <TouchableOpacity onPress={onAbandon} style={styles.closeButtonTop}>
+            <Icon name="close" size={22} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
 
-  const getButtonText = () => {
-    if (restTimer > 0) return 'Resting...';
-    if (currentSet < totalSets) return 'Complete Set';
-    if (currentExercise < totalExercises - 1) return 'Next Exercise';
-    return 'Finish Workout';
-  };
+          <View style={styles.readyContent}>
+            <Icon name="barbell" size={64} color="rgba(255,255,255,0.9)" />
+            <Text style={styles.readyWorkoutName}>{workout?.name}</Text>
+            <Text style={styles.readySubtitle}>
+              {totalExercises} exercicis · {totalSetsInWorkout} sèries totals
+            </Text>
 
+            <View style={styles.readyExerciseList}>
+              {workout?.exercises?.slice(0, 5).map((ex, idx) => (
+                <View key={idx} style={styles.readyExerciseItem}>
+                  <Text style={styles.readyExerciseNum}>{idx + 1}</Text>
+                  <View style={styles.readyExerciseInfo}>
+                    <Text style={styles.readyExerciseName}>
+                      {ex.exercise_id?.name || 'Exercici'}
+                    </Text>
+                    <Text style={styles.readyExerciseDetail}>
+                      {ex.custom_sets || ex.exercise_id?.default_sets || 3} sèries ·{' '}
+                      {(ex.exercise_id?.type === 'time' || ex.exercise_id?.type === 'cardio')
+                        ? `${ex.custom_reps || ex.exercise_id?.default_duration_seconds || 30}s`
+                        : `${ex.custom_reps || ex.exercise_id?.default_reps || 10} reps`
+                      }
+                    </Text>
+                  </View>
+                </View>
+              ))}
+              {totalExercises > 5 && (
+                <Text style={styles.readyMoreExercises}>
+                  +{totalExercises - 5} exercicis més...
+                </Text>
+              )}
+            </View>
+
+            <TouchableOpacity style={styles.startButton} onPress={handleStart}>
+              <Icon name="play" size={28} color={colors.primaryDark} />
+              <Text style={styles.startButtonText}>INICIAR ENTRENAMENT</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
+  // ── ACTIVE WORKOUT ─────────────────────────────────────────
   return (
-    <LinearGradient
-      colors={[colors.primaryDark, colors.primary]}
-      style={styles.container}
-    >
+    <LinearGradient colors={[colors.primaryDark, colors.primary]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onAbandon} style={styles.closeButton}>
-            <Icon name="close" size={24} color={colors.text.inverse} />
+            <Icon name="close" size={22} color={colors.text.inverse} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={styles.workoutName}>{workout?.name}</Text>
+            <Text style={styles.workoutName} numberOfLines={1}>{workout?.name}</Text>
             <Text style={styles.workoutProgress}>
-              Exercise {currentExercise + 1} of {totalExercises}
+              Exercici {currentExercise + 1} de {totalExercises}
             </Text>
           </View>
           <TouchableOpacity
             onPress={() => setIsPaused(!isPaused)}
             style={[styles.closeButton, isPaused && styles.pauseButtonActive]}
           >
-            <Icon
-              name={isPaused ? "play" : "pause"}
-              size={24}
-              color={colors.text.inverse}
-            />
+            <Icon name={isPaused ? 'play' : 'pause'} size={22} color={colors.text.inverse} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Main Content */}
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {restTimer > 0 ? (
-            // REST MODE
+            // ── REST MODE ──
             <View style={styles.mainContent}>
-              <Text style={styles.restLabel}>REST TIME</Text>
-
+              <Text style={styles.restLabel}>DESCANS</Text>
               <CircularTimer
                 duration={restDuration}
                 timeRemaining={restTimer}
-                size={Math.min(width * 0.6, 250)}
+                size={Math.min(width * 0.6, 240)}
               />
-
-              <TouchableOpacity
-                onPress={handleAddTime}
-                style={styles.addTimeButton}
-              >
-                <Icon name="add-circle-outline" size={20} color={colors.text.inverse} />
-                <Text style={styles.addTimeText}>+15 seconds</Text>
+              <TouchableOpacity onPress={() => setRestTimer(prev => prev + 15)} style={styles.addTimeButton}>
+                <Icon name="add-circle-outline" size={18} color={colors.text.inverse} />
+                <Text style={styles.addTimeText}>+15 s</Text>
               </TouchableOpacity>
-
-              {/* Next Exercise Preview */}
               {nextExercise && (
                 <View style={styles.nextUpCard}>
-                  <Text style={styles.nextUpLabel}>NEXT UP</Text>
-                  <Icon name="fitness" size={32} color={colors.primary} />
+                  <Text style={styles.nextUpLabel}>PROPERA SÈRIE</Text>
                   <Text style={styles.nextUpExercise}>
-                    {nextExercise.exercise_id?.name || 'Next Exercise'}
+                    {nextExercise.exercise_id?.name || 'Exercici'}
                   </Text>
                   <Text style={styles.nextUpDetails}>
-                    {nextExercise.custom_sets || nextExercise.exercise_id?.default_sets || 3} sets × {' '}
-                    {nextExercise.custom_reps || nextExercise.exercise_id?.default_reps || 10} reps
+                    Sèrie {currentSet} de {totalSets}
                   </Text>
                 </View>
               )}
             </View>
-          ) : (
-            // EXERCISE MODE
+          ) : (exerciseType === 'time' || exerciseType === 'cardio') ? (
+            // ── TIME-BASED EXERCISE MODE ──
             <View style={styles.mainContent}>
               <Text style={styles.exerciseName}>
-                {exercise?.exercise_id?.name || 'Exercise'}
+                {exerciseInfo?.name || 'Exercici'}
               </Text>
-
-              {/* Set Tracker */}
               <SetTracker currentSet={currentSet} totalSets={totalSets} />
 
-              {/* Exercise Details */}
-              <View style={styles.exerciseDetails}>
-                <View style={styles.detailCard}>
-                  <Icon name="repeat" size={32} color={colors.primary} />
-                  <Text style={styles.detailValue}>{reps}</Text>
-                  <Text style={styles.detailLabel}>Reps</Text>
-                </View>
+              <View style={styles.timedExerciseContainer}>
+                {!exerciseTimerRunning && exerciseTimer === timeDuration ? (
+                  // Not started yet
+                  <TouchableOpacity style={styles.startTimerButton} onPress={handleStartExerciseTimer}>
+                    <Icon name="play-circle" size={80} color="rgba(255,255,255,0.9)" />
+                    <Text style={styles.startTimerText}>{formatTime(timeDuration)}</Text>
+                    <Text style={styles.startTimerHint}>Prem per iniciar</Text>
+                  </TouchableOpacity>
+                ) : exerciseTimerRunning ? (
+                  // Running
+                  <View style={styles.timerDisplay}>
+                    <CircularTimer
+                      duration={timeDuration}
+                      timeRemaining={exerciseTimer}
+                      size={Math.min(width * 0.6, 240)}
+                    />
+                    <Text style={styles.timerRunningHint}>En curs...</Text>
+                  </View>
+                ) : (
+                  // Finished
+                  <View style={styles.timerDoneContainer}>
+                    <Icon name="checkmark-circle" size={80} color="rgba(255,255,255,0.9)" />
+                    <Text style={styles.timerDoneText}>Temps completat!</Text>
+                  </View>
+                )}
+              </View>
 
+              <View style={styles.exerciseDetailsRow}>
+                <View style={styles.detailCard}>
+                  <Icon name="time" size={28} color={colors.primary} />
+                  <Text style={styles.detailValue}>{timeDuration}s</Text>
+                  <Text style={styles.detailLabel}>Durada</Text>
+                </View>
+                <View style={styles.detailCard}>
+                  <Icon name="reload" size={28} color={colors.primary} />
+                  <Text style={styles.detailValue}>{restDuration}s</Text>
+                  <Text style={styles.detailLabel}>Descans</Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            // ── REPS MODE ──
+            <View style={styles.mainContent}>
+              <Text style={styles.exerciseName}>
+                {exerciseInfo?.name || 'Exercici'}
+              </Text>
+              <SetTracker currentSet={currentSet} totalSets={totalSets} />
+
+              {/* Big reps display */}
+              <View style={styles.repsDisplay}>
+                <Text style={styles.repsNumber}>{reps}</Text>
+                <Text style={styles.repsLabel}>repeticions</Text>
+              </View>
+
+              <View style={styles.exerciseDetailsRow}>
                 {weight && (
                   <View style={styles.detailCard}>
-                    <Icon name="barbell" size={32} color={colors.primary} />
+                    <Icon name="barbell" size={28} color={colors.primary} />
                     <Text style={styles.detailValue}>{weight}</Text>
                     <Text style={styles.detailLabel}>kg</Text>
                   </View>
                 )}
-
                 <View style={styles.detailCard}>
-                  <Icon name="time" size={32} color={colors.primary} />
+                  <Icon name="time" size={28} color={colors.primary} />
                   <Text style={styles.detailValue}>{restDuration}s</Text>
-                  <Text style={styles.detailLabel}>Rest</Text>
+                  <Text style={styles.detailLabel}>Descans</Text>
                 </View>
               </View>
 
-              {/* Instructions if available */}
-              {exercise?.exercise_id?.instructions && (
+              {exerciseInfo?.instructions && (
                 <View style={styles.instructionsCard}>
-                  <Text style={styles.instructionsTitle}>Instructions</Text>
-                  <Text style={styles.instructionsText}>
-                    {exercise.exercise_id.instructions}
-                  </Text>
+                  <Text style={styles.instructionsTitle}>Instruccions</Text>
+                  <Text style={styles.instructionsText}>{exerciseInfo.instructions}</Text>
                 </View>
               )}
             </View>
           )}
 
-          {/* Progress Bar - Segmented */}
+          {/* Progress */}
           <View style={styles.progressContainer}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Workout Progress</Text>
+              <Text style={styles.progressLabel}>Progrés</Text>
               <Text style={styles.sessionTimer}>{formatTime(totalElapsedTime)}</Text>
             </View>
             <View style={styles.segmentedProgressBar}>
@@ -257,42 +349,40 @@ export default function ActiveWorkoutScreen({
               ))}
             </View>
             <Text style={styles.progressText}>
-              {totalSetsCompleted} / {totalSetsInWorkout} sets
+              {totalSetsCompleted} / {totalSetsInWorkout} sèries
             </Text>
           </View>
         </ScrollView>
 
-        {/* Bottom Actions - Big Central Button */}
+        {/* Action Button */}
         <View style={styles.bottomActions}>
           {restTimer > 0 ? (
             <TouchableOpacity
-              style={[
-                styles.bigActionButton,
-                styles.skipRestButton,
-                isPaused && styles.actionButtonDisabled
-              ]}
-              onPress={handleSkipRest}
+              style={[styles.bigActionButton, styles.skipRestButton, isPaused && styles.actionButtonDisabled]}
+              onPress={() => setRestTimer(0)}
               disabled={isPaused}
             >
-              <Icon name="play-skip-forward" size={28} color={colors.text.inverse} />
-              <Text style={styles.bigActionButtonText}>Skip Rest</Text>
+              <Icon name="play-skip-forward" size={26} color={colors.text.inverse} />
+              <Text style={styles.bigActionButtonText}>Saltar descans</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={[
                 styles.bigActionButton,
-                styles.completeSetButton,
+                isLastAction ? styles.finishButton : styles.completeSetButton,
                 isPaused && styles.actionButtonDisabled
               ]}
               onPress={handleCompleteSet}
               disabled={isPaused}
             >
               <Icon
-                name={currentExercise >= totalExercises - 1 && currentSet >= totalSets ? "checkmark-circle" : "checkmark"}
-                size={32}
-                color={colors.text.inverse}
+                name={isLastAction ? 'trophy' : 'checkmark'}
+                size={28}
+                color={isLastAction ? '#FFD700' : colors.primaryDark}
               />
-              <Text style={styles.bigActionButtonText}>{getButtonText()}</Text>
+              <Text style={[styles.bigActionButtonText, isLastAction && { color: '#FFD700' }]}>
+                {getButtonLabel()}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -302,16 +392,11 @@ export default function ActiveWorkoutScreen({
           <View style={styles.pauseOverlay}>
             <View style={styles.pauseContent}>
               <Icon name="pause-circle" size={80} color={colors.text.inverse} />
-              <Text style={styles.pauseTitle}>WORKOUT PAUSED</Text>
-              <Text style={styles.pauseSubtitle}>
-                Take your time, tap to resume
-              </Text>
-              <TouchableOpacity
-                style={styles.resumeButton}
-                onPress={() => setIsPaused(false)}
-              >
-                <Icon name="play" size={28} color={colors.primaryDark} />
-                <Text style={styles.resumeButtonText}>RESUME</Text>
+              <Text style={styles.pauseTitle}>PAUSAT</Text>
+              <Text style={styles.pauseSubtitle}>Pren-te el temps que necessitis</Text>
+              <TouchableOpacity style={styles.resumeButton} onPress={() => setIsPaused(false)}>
+                <Icon name="play" size={26} color={colors.primaryDark} />
+                <Text style={styles.resumeButtonText}>REPRENDRE</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -322,12 +407,108 @@ export default function ActiveWorkoutScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+
+  // ── READY SCREEN ──
+  closeButtonTop: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  safeArea: {
+  readyContent: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingTop: 60,
+    paddingBottom: 30,
   },
+  readyWorkoutName: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: colors.text.inverse,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  readySubtitle: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 6,
+    marginBottom: 28,
+  },
+  readyExerciseList: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 32,
+  },
+  readyExerciseItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  readyExerciseNum: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    textAlign: 'center',
+    lineHeight: 28,
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: colors.text.inverse,
+    marginRight: 12,
+  },
+  readyExerciseInfo: { flex: 1 },
+  readyExerciseName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.inverse,
+  },
+  readyExerciseDetail: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 2,
+  },
+  readyMoreExercises: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'center',
+    paddingTop: 8,
+  },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.text.inverse,
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    borderRadius: 30,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  startButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primaryDark,
+    letterSpacing: 0.5,
+  },
+
+  // ── ACTIVE HEADER ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -343,20 +524,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerContent: {
-    flex: 1,
-    alignItems: 'center',
-  },
+  pauseButtonActive: { backgroundColor: colors.warning },
+  headerContent: { flex: 1, alignItems: 'center' },
   workoutName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: colors.text.inverse,
   },
   workoutProgress: {
-    fontSize: 14,
-    color: colors.overlay.white30,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
     marginTop: 2,
   },
+
+  // ── SCROLL ──
   scrollContent: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.lg,
@@ -365,189 +546,251 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.lg,
   },
-  restLabel: {
+
+  // ── EXERCISE NAME ──
+  exerciseName: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: colors.text.inverse,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    letterSpacing: -0.5,
+  },
+
+  // ── REPS DISPLAY ──
+  repsDisplay: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 48,
+    width: '80%',
+  },
+  repsNumber: {
+    fontSize: 72,
+    fontWeight: 'bold',
+    color: colors.text.inverse,
+    lineHeight: 80,
+  },
+  repsLabel: {
     fontSize: 16,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+
+  // ── TIME EXERCISE ──
+  timedExerciseContainer: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  startTimerButton: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  startTimerText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: colors.text.inverse,
+    marginTop: 8,
+  },
+  startTimerHint: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 8,
+  },
+  timerDisplay: { alignItems: 'center' },
+  timerRunningHint: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: spacing.sm,
+  },
+  timerDoneContainer: { alignItems: 'center' },
+  timerDoneText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.text.inverse,
+    marginTop: spacing.sm,
+  },
+
+  // ── DETAIL CARDS ──
+  exerciseDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  detailCard: {
+    backgroundColor: colors.overlay.white10,
+    borderRadius: 16,
+    padding: spacing.md,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  detailValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.text.inverse,
+    marginTop: 4,
+  },
+  detailLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+
+  // ── INSTRUCTIONS ──
+  instructionsCard: {
+    width: '100%',
+    backgroundColor: colors.overlay.white10,
+    borderRadius: 16,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+  },
+  instructionsTitle: {
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.overlay.white30,
-    letterSpacing: 2,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    lineHeight: 20,
+  },
+
+  // ── REST MODE ──
+  restLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: 3,
     marginBottom: spacing.lg,
   },
   addTimeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     backgroundColor: colors.overlay.white20,
     borderRadius: 20,
+    gap: 6,
   },
   addTimeText: {
     fontSize: 14,
     color: colors.text.inverse,
-    marginLeft: spacing.xs,
     fontWeight: '600',
   },
   nextUpCard: {
     width: '100%',
     backgroundColor: colors.overlay.white10,
-    borderRadius: spacing.card.radius,
+    borderRadius: 16,
     padding: spacing.md,
     marginTop: spacing.xl,
     alignItems: 'center',
   },
   nextUpLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.overlay.white30,
-    letterSpacing: 1,
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 2,
     marginBottom: spacing.sm,
   },
   nextUpExercise: {
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.text.inverse,
-    marginTop: spacing.sm,
   },
   nextUpDetails: {
-    fontSize: 14,
-    color: colors.overlay.white30,
-    marginTop: spacing.xs,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 4,
   },
-  exerciseName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text.inverse,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  exerciseDetails: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-  },
-  detailCard: {
-    backgroundColor: colors.overlay.white10,
-    borderRadius: spacing.card.radius,
-    padding: spacing.md,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  detailValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text.inverse,
-    marginTop: spacing.xs,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: colors.overlay.white30,
-    marginTop: spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  instructionsCard: {
-    width: '100%',
-    backgroundColor: colors.overlay.white10,
-    borderRadius: spacing.card.radius,
-    padding: spacing.md,
-    marginTop: spacing.lg,
-  },
-  instructionsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.inverse,
-    marginBottom: spacing.sm,
-  },
-  instructionsText: {
-    fontSize: 14,
-    color: colors.overlay.white30,
-    lineHeight: 20,
-  },
-  progressContainer: {
-    marginTop: spacing.xl,
-  },
+
+  // ── PROGRESS ──
+  progressContainer: { marginTop: spacing.xl },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   progressLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.text.inverse,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   sessionTimer: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     color: colors.secondary,
     letterSpacing: 1,
   },
   segmentedProgressBar: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 3,
     marginBottom: spacing.sm,
   },
   progressSegment: {
     flex: 1,
-    height: 8,
-    backgroundColor: colors.overlay.white20,
-    borderRadius: 4,
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 3,
   },
-  progressSegmentCompleted: {
-    backgroundColor: colors.secondary,
-  },
+  progressSegmentCompleted: { backgroundColor: colors.secondary },
   progressText: {
-    fontSize: 13,
-    color: colors.overlay.white30,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
     textAlign: 'center',
     fontWeight: '500',
   },
+
+  // ── BOTTOM ACTION ──
   bottomActions: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   bigActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xl,
-    borderRadius: spacing.borderRadius.large,
-    gap: spacing.md,
+    paddingVertical: 20,
+    borderRadius: 20,
+    gap: spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 8,
   },
-  completeSetButton: {
-    backgroundColor: colors.text.inverse,
-  },
-  skipRestButton: {
-    backgroundColor: colors.secondary,
-  },
+  completeSetButton: { backgroundColor: colors.text.inverse },
+  skipRestButton: { backgroundColor: colors.secondary },
+  finishButton: { backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 2, borderColor: '#FFD700' },
+  actionButtonDisabled: { opacity: 0.5 },
   bigActionButtonText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: colors.primaryDark,
     letterSpacing: 0.5,
   },
-  actionButtonDisabled: {
-    opacity: 0.5,
-  },
-  pauseButtonActive: {
-    backgroundColor: colors.warning,
-  },
+
+  // ── PAUSE OVERLAY ──
   pauseOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
@@ -561,11 +804,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text.inverse,
     marginTop: spacing.lg,
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   pauseSubtitle: {
-    fontSize: 16,
-    color: colors.overlay.white30,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.5)',
     marginTop: spacing.sm,
     marginBottom: spacing.xl,
   },
@@ -573,13 +816,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.text.inverse,
-    paddingVertical: spacing.md,
+    paddingVertical: 14,
     paddingHorizontal: spacing.xl,
     borderRadius: 30,
     gap: spacing.sm,
   },
   resumeButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: colors.primaryDark,
     letterSpacing: 1,

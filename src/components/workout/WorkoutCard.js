@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Dumbbell, Clock, TrendingUp, Play, ChevronDown, ChevronUp } from 'lucide-react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-export default function WorkoutCard({ workout, onStart }) {
+export default function WorkoutCard({ workout, onStart, onEdit }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -50,27 +51,42 @@ export default function WorkoutCard({ workout, onStart }) {
       {isExpanded && workout.exercises && workout.exercises.length > 0 && (
         <View style={styles.exerciseList}>
           <Text style={styles.exerciseListTitle}>Exercicis:</Text>
-          {workout.exercises.map((ex, idx) => (
-            <View key={idx} style={styles.exerciseItem}>
-              <Text style={styles.exerciseName}>
-                • {ex.exercise_id?.name || 'Exercici'}
-              </Text>
-              <Text style={styles.exerciseDetails}>
-                {ex.custom_sets || ex.exercise_id?.default_sets || 3}x
-                {ex.custom_reps || ex.exercise_id?.default_reps || 10}
-              </Text>
-            </View>
-          ))}
+          {workout.exercises.map((ex, idx) => {
+            const isTime = ex.exercise_id?.type === 'time' || ex.exercise_id?.type === 'cardio';
+            const sets = ex.custom_sets || ex.exercise_id?.default_sets || 3;
+            const reps = ex.custom_reps || ex.exercise_id?.default_reps || 10;
+            return (
+              <View key={idx} style={styles.exerciseItem}>
+                <Text style={styles.exerciseName}>
+                  • {ex.exercise_id?.name || 'Exercici'}
+                </Text>
+                <Text style={styles.exerciseDetails}>
+                  {sets}x{isTime ? `${reps}s` : reps}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       )}
 
-      <TouchableOpacity
-        style={styles.cardButton}
-        onPress={() => onStart(workout)}
-      >
-        <Play size={18} color="white" fill="white" />
-        <Text style={styles.cardButtonText}>COMENÇAR</Text>
-      </TouchableOpacity>
+      <View style={styles.cardButtons}>
+        {onEdit && (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => onEdit(workout)}
+          >
+            <Icon name="pencil" size={16} color="#4CAF50" />
+            <Text style={styles.editButtonText}>Editar</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.cardButton, onEdit && { flex: 1 }]}
+          onPress={() => onStart(workout)}
+        >
+          <Play size={16} color="white" fill="white" />
+          <Text style={styles.cardButtonText}>COMENÇAR</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -152,18 +168,39 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '600',
   },
+  cardButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   cardButton: {
+    flex: 2,
     backgroundColor: '#4CAF50',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
     borderRadius: 10,
-    gap: 8,
+    gap: 6,
   },
   cardButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#4CAF50',
+    gap: 6,
+  },
+  editButtonText: {
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

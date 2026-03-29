@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -19,7 +20,6 @@ import {
   uploadAvatar,
   deleteAvatar,
   getUserStats,
-  logout
 } from '../services/api';
 import Button from '../components/common/Button';
 import EditProfileModal from '../components/profile/EditProfileModal';
@@ -29,9 +29,11 @@ import ConfirmModal from '../components/common/ConfirmModal';
 import InfoModal from '../components/common/InfoModal';
 import ErrorModal from '../components/common/ErrorModal';
 import useModal from '../hooks/useModal';
+import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
 
-export default function ProfileScreen({ navigation, onLogout }) {
+export default function ProfileScreen({ navigation }) {
+  const { logout: authLogout } = useAuth();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,9 +63,11 @@ export default function ProfileScreen({ navigation, onLogout }) {
     confirm: ''
   });
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+    }, [])
+  );
 
   const loadUserData = async () => {
     try {
@@ -84,7 +88,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
       setNewUsername(userData.username || '');
     } catch (error) {
       errorModal.openModal({
-        message: 'No se pudo cargar el perfil',
+        message: 'No s\'ha pogut carregar el perfil',
       });
     } finally {
       setLoading(false);
@@ -103,8 +107,8 @@ export default function ProfileScreen({ navigation, onLogout }) {
 
       if (!permissionResult.granted) {
         errorModal.openModal({
-          title: 'Permiso requerido',
-          message: 'Necesitas permitir acceso a la galería',
+          title: 'Permís requerit',
+          message: 'Has de permetre l\'accés a la galeria',
         });
         return;
       }
@@ -122,14 +126,14 @@ export default function ProfileScreen({ navigation, onLogout }) {
         setUser({ ...user, avatar_url: response.avatar_url });
         setLoading(false);
         infoModal.openModal({
-          title: 'Éxito',
-          message: 'Avatar actualizado',
+          title: 'Fet!',
+          message: 'Avatar actualitzat',
         });
       }
     } catch (error) {
       setLoading(false);
       errorModal.openModal({
-        message: error.message || 'No se pudo subir el avatar',
+        message: error.message || 'No s\'ha pogut pujar l\'avatar',
       });
     }
   };
@@ -137,7 +141,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
   const handleDeleteAvatar = async () => {
     confirmModal.openModal({
       title: 'Eliminar avatar',
-      message: '¿Estás seguro de que quieres eliminar tu avatar?',
+      message: 'Estàs segur que vols eliminar el teu avatar?',
       confirmText: 'Eliminar',
       variant: 'danger',
       onConfirm: async () => {
@@ -148,13 +152,13 @@ export default function ProfileScreen({ navigation, onLogout }) {
           setUser({ ...user, avatar_url: null });
           setLoading(false);
           infoModal.openModal({
-            title: 'Éxito',
-            message: 'Avatar eliminado',
+            title: 'Fet!',
+            message: 'Avatar eliminat',
           });
         } catch (error) {
           setLoading(false);
           errorModal.openModal({
-            message: 'No se pudo eliminar el avatar',
+            message: 'No s\'ha pogut eliminar l\'avatar',
           });
         }
       },
@@ -176,12 +180,12 @@ export default function ProfileScreen({ navigation, onLogout }) {
       setEditProfileModal(false);
       await loadUserData();
       infoModal.openModal({
-        title: 'Éxito',
-        message: 'Perfil actualizado',
+        title: 'Fet!',
+        message: 'Perfil actualitzat',
       });
     } catch (error) {
       errorModal.openModal({
-        message: error.message || 'No se pudo actualizar el perfil',
+        message: error.message || 'No s\'ha pogut actualitzar el perfil',
       });
     } finally {
       setLoading(false);
@@ -191,7 +195,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
   const handleChangeUsername = async () => {
     if (!newUsername.trim()) {
       errorModal.openModal({
-        message: 'El nombre de usuario no puede estar vacío',
+        message: 'El nom d\'usuari no pot estar buit',
       });
       return;
     }
@@ -202,12 +206,12 @@ export default function ProfileScreen({ navigation, onLogout }) {
       setUser(response.user);
       setChangeUsernameModal(false);
       infoModal.openModal({
-        title: 'Éxito',
-        message: 'Nombre de usuario actualizado',
+        title: 'Fet!',
+        message: 'Nom d\'usuari actualitzat',
       });
     } catch (error) {
       errorModal.openModal({
-        message: error.message || 'No se pudo cambiar el nombre de usuario',
+        message: error.message || 'No s\'ha pogut canviar el nom d\'usuari',
       });
     } finally {
       setLoading(false);
@@ -217,21 +221,21 @@ export default function ProfileScreen({ navigation, onLogout }) {
   const handleChangePassword = async () => {
     if (!passwordForm.current || !passwordForm.new || !passwordForm.confirm) {
       errorModal.openModal({
-        message: 'Por favor completa todos los campos',
+        message: 'Si us plau, omple tots els camps',
       });
       return;
     }
 
     if (passwordForm.new !== passwordForm.confirm) {
       errorModal.openModal({
-        message: 'Las contraseñas no coinciden',
+        message: 'Les contrasenyes no coincideixen',
       });
       return;
     }
 
     if (passwordForm.new.length < 6) {
       errorModal.openModal({
-        message: 'La contraseña debe tener al menos 6 caracteres',
+        message: 'La contrasenya ha de tenir almenys 6 caràcters',
       });
       return;
     }
@@ -242,9 +246,9 @@ export default function ProfileScreen({ navigation, onLogout }) {
       setChangePasswordModal(false);
       setPasswordForm({ current: '', new: '', confirm: '' });
       infoModal.openModal({
-        title: 'Éxito',
-        message: 'Contraseña cambiada. Por favor inicia sesión nuevamente',
-        buttonText: 'Cerrar sesión',
+        title: 'Fet!',
+        message: 'Contrasenya canviada. Si us plau, inicia sessió de nou',
+        buttonText: 'Tancar sessió',
         onClose: async () => {
           infoModal.closeModal();
           await doLogout();
@@ -252,7 +256,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
       });
     } catch (error) {
       errorModal.openModal({
-        message: error.message || 'No se pudo cambiar la contraseña',
+        message: error.message || 'No s\'ha pogut canviar la contrasenya',
       });
     } finally {
       setLoading(false);
@@ -260,19 +264,14 @@ export default function ProfileScreen({ navigation, onLogout }) {
   };
 
   const doLogout = async () => {
-    try {
-      await logout();
-      if (onLogout) onLogout();
-    } catch (error) {
-      // Ignore logout errors, user will be logged out anyway
-    }
+    await authLogout();
   };
 
   const handleLogout = async () => {
     confirmModal.openModal({
-      title: 'Cerrar sesión',
-      message: '¿Estás seguro de que quieres cerrar sesión?',
-      confirmText: 'Salir',
+      title: 'Tancar sessió',
+      message: 'Estàs segur que vols tancar la sessió?',
+      confirmText: 'Sortir',
       variant: 'danger',
       onConfirm: async () => {
         confirmModal.closeModal();
@@ -295,7 +294,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4CAF50" />
-          <Text style={styles.loadingText}>Cargando perfil...</Text>
+          <Text style={styles.loadingText}>Carregant perfil...</Text>
         </View>
       </SafeAreaView>
     );
@@ -329,31 +328,32 @@ export default function ProfileScreen({ navigation, onLogout }) {
           {user?.avatar_url && (
             <TouchableOpacity onPress={handleDeleteAvatar} style={styles.deleteAvatarBtn}>
               <Text style={styles.deleteAvatarText}>Eliminar avatar</Text>
+
             </TouchableOpacity>
           )}
 
-          <Text style={styles.name}>{user?.name || 'Usuario'}</Text>
+          <Text style={styles.name}>{user?.name || 'Usuari'}</Text>
           <Text style={styles.username}>@{user?.username || 'username'}</Text>
           <Text style={styles.email}>{user?.email}</Text>
         </View>
 
         {/* Info Section */}
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Información Física</Text>
+          <Text style={styles.sectionTitle}>Informació Física</Text>
           <View style={styles.infoRow}>
             <Scale size={20} color="#666" />
-            <Text style={styles.infoLabel}>Peso:</Text>
+            <Text style={styles.infoLabel}>Pes:</Text>
             <Text style={styles.infoValue}>{user?.weight ? `${user.weight} kg` : '-'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Ruler size={20} color="#666" />
-            <Text style={styles.infoLabel}>Altura:</Text>
+            <Text style={styles.infoLabel}>Alçada:</Text>
             <Text style={styles.infoValue}>{user?.height ? `${user.height} cm` : '-'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Calendar size={20} color="#666" />
-            <Text style={styles.infoLabel}>Edad:</Text>
-            <Text style={styles.infoValue}>{user?.age ? `${user.age} años` : '-'}</Text>
+            <Text style={styles.infoLabel}>Edat:</Text>
+            <Text style={styles.infoValue}>{user?.age ? `${user.age} anys` : '-'}</Text>
           </View>
         </View>
 
@@ -369,7 +369,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
           />
 
           <Button
-            text="Cambiar nombre de usuario"
+            text="Canviar nom d'usuari"
             icon="at-outline"
             variant="outline"
             onPress={() => setChangeUsernameModal(true)}
@@ -378,7 +378,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
           />
 
           <Button
-            text="Cambiar contraseña"
+            text="Canviar contrasenya"
             icon="lock-closed-outline"
             variant="outline"
             onPress={() => setChangePasswordModal(true)}
@@ -387,7 +387,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
           />
 
           <Button
-            text="Schedule semanal"
+            text="Planning setmanal"
             icon="calendar-outline"
             variant="outline"
             onPress={() => navigation.navigate('WeeklySchedule')}
@@ -396,7 +396,7 @@ export default function ProfileScreen({ navigation, onLogout }) {
           />
 
           <Button
-            text="Cerrar sesión"
+            text="Tancar sessió"
             icon="log-out-outline"
             variant="danger"
             onPress={handleLogout}

@@ -11,7 +11,28 @@
       "resizeMode": "contain",
       "backgroundColor": "#2D5016"
     },
-    "platforms": ["ios", "android", "web"],
-    "assetBundlePatterns": ["**/*"]
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      "expo-font"
+    ],
+    "android": {
+      "package": "com.grovefitness.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#2D5016"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.grovefitness.app",
+      "buildNumber": "1"
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
   }
 }

@@ -26,6 +26,7 @@ export default function CreateWorkoutModal({
   availableExercises,
   onSubmit,
   creating,
+  isEditing,
 }) {
   return (
     <Modal
@@ -40,7 +41,9 @@ export default function CreateWorkoutModal({
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="white" />
             </TouchableOpacity>
-            <Text style={styles.createModalTitle}>✨ Crear Workout</Text>
+            <Text style={styles.createModalTitle}>
+              {isEditing ? '✏️ Editar Workout' : '✨ Crear Workout'}
+            </Text>
           </View>
 
           <ScrollView style={styles.createModalContent}>
@@ -138,7 +141,9 @@ export default function CreateWorkoutModal({
               ) : (
                 <>
                   <Ionicons name="checkmark-circle" size={20} color="white" />
-                  <Text style={styles.createButtonText}>CREAR WORKOUT</Text>
+                  <Text style={styles.createButtonText}>
+                    {isEditing ? 'GUARDAR CANVIS' : 'CREAR WORKOUT'}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -154,15 +159,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 10, // Reduced from paddingVertical to give more space
-    paddingBottom: 15,
+    paddingTop: 20,
+    paddingBottom: 18,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.2)',
   },
   closeButton: {
     marginRight: 15,
-    padding: 8, // Increase touch area
-    margin: -8, // Negative margin to maintain visual spacing
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   createModalTitle: {
     fontSize: 22,
