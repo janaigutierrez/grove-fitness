@@ -25,11 +25,7 @@ export default function DashboardScreen() {
   const errorModal = useModal();
   const infoModal = useModal();
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  // Reload data when screen comes into focus
+  // Load only when screen comes into focus (avoids double-fire on mount)
   useEffect(() => {
     if (isFocused) {
       loadDashboardData();
