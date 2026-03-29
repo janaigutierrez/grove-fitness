@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError } from '../utils/errorHandler';
 import logger from '../utils/logger';
+import cache, { TTL } from './cache';
 
 // ============ CALLBACK DE LOGOUT (evita circular dependency amb AuthContext) ============
 let onUnauthorizedCallback = null;
@@ -138,14 +139,23 @@ export const logout = async () => {
 };
 
 export const getCurrentUser = async () => {
-    return fetchWithAuth('/auth/me');
+    const cached = cache.get('user:me');
+    if (cached) return cached;
+    const data = await fetchWithAuth('/auth/me');
+    cache.set('user:me', data, TTL.USER_ME);
+    return data;
 };
 
 // ============ WORKOUTS ============
 export const getWorkouts = async (filters = {}) => {
     const queryString = new URLSearchParams(filters).toString();
+    const cacheKey = `workouts:${queryString || 'all'}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return cached;
     const endpoint = `/workouts${queryString ? `?${queryString}` : ''}`;
-    return fetchWithAuth(endpoint);
+    const data = await fetchWithAuth(endpoint);
+    cache.set(cacheKey, data, TTL.WORKOUTS);
+    return data;
 };
 
 export const getWorkoutById = async (workoutId) => {
@@ -153,29 +163,37 @@ export const getWorkoutById = async (workoutId) => {
 };
 
 export const createWorkout = async (workoutData) => {
-    return fetchWithAuth('/workouts', {
+    const data = await fetchWithAuth('/workouts', {
         method: 'POST',
         body: JSON.stringify(workoutData)
     });
+    cache.invalidatePrefix('workouts:');
+    return data;
 };
 
 export const updateWorkout = async (workoutId, workoutData) => {
-    return fetchWithAuth(`/workouts/${workoutId}`, {
+    const data = await fetchWithAuth(`/workouts/${workoutId}`, {
         method: 'PUT',
         body: JSON.stringify(workoutData)
     });
+    cache.invalidatePrefix('workouts:');
+    return data;
 };
 
 export const deleteWorkout = async (workoutId) => {
-    return fetchWithAuth(`/workouts/${workoutId}`, {
+    const data = await fetchWithAuth(`/workouts/${workoutId}`, {
         method: 'DELETE'
     });
+    cache.invalidatePrefix('workouts:');
+    return data;
 };
 
 export const duplicateWorkout = async (workoutId) => {
-    return fetchWithAuth(`/workouts/${workoutId}/duplicate`, {
+    const data = await fetchWithAuth(`/workouts/${workoutId}/duplicate`, {
         method: 'POST'
     });
+    cache.invalidatePrefix('workouts:');
+    return data;
 };
 
 // ============ SESSIONS ============
@@ -194,10 +212,12 @@ export const updateSession = async (sessionId, exercisesData) => {
 };
 
 export const completeWorkoutSession = async (sessionId, sessionData) => {
-    return fetchWithAuth(`/sessions/${sessionId}/complete`, {
+    const data = await fetchWithAuth(`/sessions/${sessionId}/complete`, {
         method: 'POST',
         body: JSON.stringify(sessionData)
     });
+    cache.invalidate('user:stats');
+    return data;
 };
 
 export const abandonSession = async (sessionId, reason) => {
@@ -220,8 +240,13 @@ export const getSessionById = async (sessionId) => {
 // ============ EXERCISES ============
 export const getExercises = async (filters = {}) => {
     const queryString = new URLSearchParams(filters).toString();
+    const cacheKey = `exercises:${queryString || 'all'}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return cached;
     const endpoint = `/exercises${queryString ? `?${queryString}` : ''}`;
-    return fetchWithAuth(endpoint);
+    const data = await fetchWithAuth(endpoint);
+    cache.set(cacheKey, data, TTL.EXERCISES);
+    return data;
 };
 
 export const createExercise = async (exerciseData) => {
@@ -246,14 +271,21 @@ export const deleteExercise = async (exerciseId) => {
 
 // ============ USER ============
 export const getUserStats = async () => {
-    return fetchWithAuth('/users/stats');
+    const cached = cache.get('user:stats');
+    if (cached) return cached;
+    const data = await fetchWithAuth('/users/stats');
+    cache.set('user:stats', data, TTL.USER_STATS);
+    return data;
 };
 
 export const updateUserProfile = async (userData) => {
-    return fetchWithAuth('/users/profile', {
+    const data = await fetchWithAuth('/users/profile', {
         method: 'PUT',
         body: JSON.stringify(userData)
     });
+    cache.invalidate('user:me');
+    cache.invalidate('user:stats');
+    return data;
 };
 
 export const updatePreferences = async (preferences) => {
@@ -264,14 +296,20 @@ export const updatePreferences = async (preferences) => {
 };
 
 export const getWeeklySchedule = async () => {
-    return fetchWithAuth('/users/weekly-schedule');
+    const cached = cache.get('user:weekly-schedule');
+    if (cached) return cached;
+    const data = await fetchWithAuth('/users/weekly-schedule');
+    cache.set('user:weekly-schedule', data, TTL.WEEKLY_SCHEDULE);
+    return data;
 };
 
 export const updateWeeklySchedule = async (scheduleData) => {
-    return fetchWithAuth('/users/weekly-schedule', {
+    const data = await fetchWithAuth('/users/weekly-schedule', {
         method: 'PUT',
         body: JSON.stringify(scheduleData)
     });
+    cache.invalidate('user:weekly-schedule');
+    return data;
 };
 
 export const getTodayWorkout = async () => {
