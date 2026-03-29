@@ -31,8 +31,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "da52d1b2-6736-4c8b-b6b7-580f66a9f36c"
       }
-    }
+    },
+    "owner": "janaigutierrez"
   }
 }
