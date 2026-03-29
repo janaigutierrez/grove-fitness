@@ -116,8 +116,9 @@ const startSession = async (userId, workoutId) => {
     });
 
     if (activeSession) {
-        const error = new Error('You have an active workout session');
-        error.statusCode = 400;
+        const error = new Error('Active session exists');
+        error.statusCode = 409;
+        error.activeSessionId = activeSession._id.toString();
         throw error;
     }
 

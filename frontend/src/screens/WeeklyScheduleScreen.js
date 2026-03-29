@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -23,13 +24,13 @@ import useModal from '../hooks/useModal';
 import colors from '../constants/colors';
 
 const DAYS_OF_WEEK = [
-  { key: 'monday', label: 'Lunes', icon: 'moon' },
-  { key: 'tuesday', label: 'Martes', icon: 'planet' },
-  { key: 'wednesday', label: 'Miércoles', icon: 'sunny' },
-  { key: 'thursday', label: 'Jueves', icon: 'thunderstorm' },
-  { key: 'friday', label: 'Viernes', icon: 'flame' },
-  { key: 'saturday', label: 'Sábado', icon: 'basketball' },
-  { key: 'sunday', label: 'Domingo', icon: 'bed' }
+  { key: 'monday', label: 'Dilluns', icon: 'moon' },
+  { key: 'tuesday', label: 'Dimarts', icon: 'planet' },
+  { key: 'wednesday', label: 'Dimecres', icon: 'sunny' },
+  { key: 'thursday', label: 'Dijous', icon: 'thunderstorm' },
+  { key: 'friday', label: 'Divendres', icon: 'flame' },
+  { key: 'saturday', label: 'Dissabte', icon: 'basketball' },
+  { key: 'sunday', label: 'Diumenge', icon: 'bed' }
 ];
 
 export default function WeeklyScheduleScreen({ navigation }) {
@@ -45,9 +46,11 @@ export default function WeeklyScheduleScreen({ navigation }) {
   const infoModal = useModal();
   const errorModal = useModal();
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const loadData = async () => {
     try {
@@ -57,13 +60,13 @@ export default function WeeklyScheduleScreen({ navigation }) {
         getWorkouts() // Get ALL workouts, not just templates
       ]);
 
-      setSchedule(scheduleData.weekly_schedule || {});
-      setWorkouts(workoutsData.workouts || []);
+      setSchedule(scheduleData || {});
+      setWorkouts(workoutsData || []);
     } catch (error) {
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
-        message: 'No se pudo cargar el schedule',
+        message: 'No s\'ha pogut carregar el planning',
         icon: errorInfo.icon,
       });
     } finally {
@@ -79,31 +82,26 @@ export default function WeeklyScheduleScreen({ navigation }) {
   const handleSelectWorkout = async (workout) => {
     if (!selectedDay) return;
 
-    const newSchedule = {
-      ...schedule,
-      [selectedDay]: workout.id || workout._id
-    };
-
+    // Store full workout object for immediate display
+    const newSchedule = { ...schedule, [selectedDay]: workout };
     setSchedule(newSchedule);
     setWorkoutPickerVisible(false);
     setSelectedDay(null);
 
-    // Guardar automáticamente
     await saveSchedule(newSchedule);
   };
 
   const handleRemoveWorkout = async (dayKey) => {
     confirmModal.openModal({
-      title: 'Eliminar entrenamiento',
-      message: '¿Estás seguro de que quieres eliminar este entrenamiento del día?',
+      title: 'Eliminar entrenament',
+      message: 'Segur que vols eliminar aquest entrenament del dia?',
       confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
+      cancelText: 'Cancel·lar',
       variant: 'danger',
       icon: 'trash',
       onConfirm: async () => {
         confirmModal.closeModal();
-        const newSchedule = { ...schedule };
-        delete newSchedule[dayKey];
+        const newSchedule = { ...schedule, [dayKey]: null };
         setSchedule(newSchedule);
         await saveSchedule(newSchedule);
       },
@@ -124,12 +122,23 @@ export default function WeeklyScheduleScreen({ navigation }) {
     await saveSchedule(newSchedule);
   };
 
+  const toIdSchedule = (localSchedule) => {
+    const ids = {};
+    Object.keys(localSchedule).forEach(day => {
+      const val = localSchedule[day];
+      if (val === null || val === undefined) ids[day] = null;
+      else if (typeof val === 'object') ids[day] = val.id || val._id?.toString();
+      else ids[day] = val;
+    });
+    return ids;
+  };
+
   const saveSchedule = async (newSchedule) => {
     try {
       setSaving(true);
-      await updateWeeklySchedule({ weekly_schedule: newSchedule });
+      await updateWeeklySchedule({ weekly_schedule: toIdSchedule(newSchedule) });
 
-      const successInfo = formatSuccessMessage('Schedule actualizado', 'success');
+      const successInfo = formatSuccessMessage('Planning actualitzat', 'success');
       infoModal.openModal({
         title: successInfo.title,
         message: successInfo.message,
@@ -140,7 +149,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
-        message: 'No se pudo guardar el schedule',
+        message: 'No s\'ha pogut guardar el planning',
         icon: errorInfo.icon,
       });
     } finally {
@@ -149,10 +158,14 @@ export default function WeeklyScheduleScreen({ navigation }) {
   };
 
   const getWorkoutForDay = (dayKey) => {
-    const workoutId = schedule[dayKey];
-    if (!workoutId) return null;
-    if (workoutId === null) return { name: 'Descanso', _id: null };
-    return workouts.find(w => w._id === workoutId);
+    const val = schedule[dayKey];
+    if (val === undefined) return null;
+    if (val === null) return { name: 'Descans', _id: null };
+    // API returns populated objects {id, name, ...}; local state also stores full objects after selection
+    if (typeof val === 'object' && val.name) return val;
+    // Fallback: string ID — find in workouts list
+    const workoutId = String(val);
+    return workouts.find(w => (w.id || w._id?.toString()) === workoutId) || null;
   };
 
   const renderDay = (day) => {
@@ -190,7 +203,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
               styles.workoutName,
               isRestDay && styles.workoutNameRest
             ]} numberOfLines={2}>
-              {workout?.name || 'Descanso'}
+              {workout?.name || 'Descans'}
             </Text>
             {!isRestDay && (
               <TouchableOpacity
@@ -204,7 +217,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
         ) : (
           <View style={styles.emptyWorkout}>
             <Icon name="add-circle-outline" size={24} color="#ccc" />
-            <Text style={styles.emptyText}>Añadir entrenamiento</Text>
+            <Text style={styles.emptyText}>Afegir entrenament</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -216,7 +229,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4CAF50" />
-          <Text style={styles.loadingText}>Cargando schedule...</Text>
+          <Text style={styles.loadingText}>Carregant planning...</Text>
         </View>
       </SafeAreaView>
     );
@@ -230,7 +243,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="arrow-back" size={24} color="#2D5016" />
           </TouchableOpacity>
-          <Text style={styles.title}>Schedule Semanal</Text>
+          <Text style={styles.title}>Planning Setmanal</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -238,7 +251,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
         <View style={styles.infoCard}>
           <Icon name="information-circle" size={24} color="#4CAF50" />
           <Text style={styles.infoText}>
-            Configura tus entrenamientos para cada día de la semana
+            Configura els teus entrenaments per a cada dia de la setmana
           </Text>
         </View>
 
@@ -253,7 +266,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
         {saving && (
           <View style={styles.savingIndicator}>
             <ActivityIndicator size="small" color="white" />
-            <Text style={styles.savingText}>Guardando...</Text>
+            <Text style={styles.savingText}>Guardant...</Text>
           </View>
         )}
       </View>
@@ -269,7 +282,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                Seleccionar Entrenamiento
+                Seleccionar Entrenament
               </Text>
               <TouchableOpacity onPress={() => setWorkoutPickerVisible(false)}>
                 <Icon name="close" size={24} color="#666" />
@@ -286,8 +299,8 @@ export default function WeeklyScheduleScreen({ navigation }) {
                   <Icon name="bed" size={24} color="white" />
                 </View>
                 <View style={styles.workoutOptionContent}>
-                  <Text style={styles.workoutOptionName}>Día de descanso</Text>
-                  <Text style={styles.workoutOptionDesc}>Sin entrenamiento</Text>
+                  <Text style={styles.workoutOptionName}>Dia de descans</Text>
+                  <Text style={styles.workoutOptionDesc}>Sense entrenament</Text>
                 </View>
               </TouchableOpacity>
 
@@ -304,7 +317,7 @@ export default function WeeklyScheduleScreen({ navigation }) {
                   <View style={styles.workoutOptionContent}>
                     <Text style={styles.workoutOptionName}>{workout.name}</Text>
                     <Text style={styles.workoutOptionDesc}>
-                      {workout.exercises?.length || 0} ejercicios
+                      {workout.exercises?.length || 0} exercicis
                       {workout.estimated_duration ? ` • ${workout.estimated_duration} min` : ''}
                     </Text>
                   </View>
@@ -315,10 +328,10 @@ export default function WeeklyScheduleScreen({ navigation }) {
                 <View style={styles.emptyWorkouts}>
                   <Icon name="barbell-outline" size={48} color="#ccc" />
                   <Text style={styles.emptyWorkoutsText}>
-                    No hay workouts disponibles
+                    No hi ha entrenaments disponibles
                   </Text>
                   <Text style={styles.emptyWorkoutsSubtext}>
-                    Crea un workout primero
+                    Crea un entrenament primer
                   </Text>
                 </View>
               )}

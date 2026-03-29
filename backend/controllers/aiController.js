@@ -58,6 +58,16 @@ const clearHistory = async (req, res, next) => {
     }
 };
 
+const executeAction = async (req, res, next) => {
+    try {
+        const { action } = req.body;
+        const result = await aiService.executeAction(req.user._id, action);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
 const generateStarterWorkout = async (req, res, next) => {
     try {
         const result = await aiService.generateStarterWorkout(req.user._id);
@@ -69,6 +79,7 @@ const generateStarterWorkout = async (req, res, next) => {
 
 module.exports = {
     chat,
+    executeAction,
     generateWorkout,
     generateStarterWorkout,
     analyzeProgress,

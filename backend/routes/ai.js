@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
     chat,
+    executeAction,
     generateWorkout,
     generateStarterWorkout,
     analyzeProgress,
@@ -28,6 +29,9 @@ router.post('/ask', auth, askQuestion);
 
 // @route   PUT /api/ai/personality
 router.put('/personality', auth, changePersonality);
+
+// @route   POST /api/ai/execute-action
+router.post('/execute-action', auth, executeAction);
 
 // @route   DELETE /api/ai/history
 router.delete('/history', auth, clearHistory);

@@ -32,7 +32,7 @@ export default function SetTracker({ currentSet, totalSets }) {
         {renderDots()}
       </View>
       <Text style={styles.label}>
-        Set {currentSet} of {totalSets}
+        Sèrie {currentSet} de {totalSets}
       </Text>
     </View>
   );

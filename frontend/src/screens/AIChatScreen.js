@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -13,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { chatWithAI, getCurrentUser, changeAIPersonality } from '../services/api';
+import { chatWithAI, executeAIAction, getCurrentUser, changeAIPersonality } from '../services/api';
 import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
 import ErrorModal from '../components/common/ErrorModal';
 import InfoModal from '../components/common/InfoModal';
@@ -29,22 +30,25 @@ export default function AIChatScreen() {
   const [changingPersonality, setChangingPersonality] = useState(false);
   const scrollViewRef = useRef();
 
-  // System modals
   const errorModal = useModal();
   const infoModal = useModal();
 
   useEffect(() => {
-    loadUser();
-    // Mensaje de bienvenida
     setMessages([
       {
         id: 1,
         role: 'assistant',
-        content: '¡Hola! Soy tu entrenador IA. ¿En qué puedo ayudarte hoy? Puedo ayudarte con rutinas, consejos de entrenamiento, nutrición, y mucho más.',
+        content: 'Hola! Sóc el teu entrenador IA. En què et puc ajudar avui? Puc crear entrenaments, actualitzar el teu planning setmanal, registrar el teu pes i molt més.',
         timestamp: new Date()
       }
     ]);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUser();
+    }, [])
+  );
 
   const loadUser = async () => {
     try {
@@ -71,16 +75,29 @@ export default function AIChatScreen() {
     try {
       const response = await chatWithAI(inputText.trim());
 
-      const assistantMessage = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: response.response,
-        timestamp: new Date()
-      };
+      const newMessages = [];
 
-      setMessages(prev => [...prev, assistantMessage]);
+      if (response.response) {
+        newMessages.push({
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: response.response,
+          timestamp: new Date()
+        });
+      }
 
-      // Auto-scroll al final
+      if (response.pending_action) {
+        newMessages.push({
+          id: Date.now() + 2,
+          role: 'action',
+          pending_action: response.pending_action,
+          actionStatus: 'pending',
+          timestamp: new Date()
+        });
+      }
+
+      setMessages(prev => [...prev, ...newMessages]);
+
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -88,7 +105,7 @@ export default function AIChatScreen() {
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
-        message: errorInfo.message || 'No se pudo enviar el mensaje',
+        message: errorInfo.message || 'No s\'ha pogut enviar el missatge',
         icon: errorInfo.icon,
       });
     } finally {
@@ -96,30 +113,76 @@ export default function AIChatScreen() {
     }
   };
 
+  const handleConfirmAction = async (messageId, action) => {
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, actionStatus: 'executing' } : m
+    ));
+
+    try {
+      const result = await executeAIAction(action);
+
+      setMessages(prev => [
+        ...prev.map(m => m.id === messageId ? { ...m, actionStatus: 'confirmed' } : m),
+        {
+          id: Date.now(),
+          role: 'assistant',
+          content: `✅ ${result.message}`,
+          timestamp: new Date()
+        }
+      ]);
+
+      // Refresh user data in case profile/weight changed
+      loadUser();
+
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (error) {
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, actionStatus: 'pending' } : m
+      ));
+      const errorInfo = handleApiError(error);
+      errorModal.openModal({
+        title: 'Error executant l\'acció',
+        message: errorInfo.message || 'No s\'ha pogut executar l\'acció',
+        icon: errorInfo.icon,
+      });
+    }
+  };
+
+  const handleCancelAction = (messageId) => {
+    setMessages(prev => [
+      ...prev.map(m => m.id === messageId ? { ...m, actionStatus: 'cancelled' } : m),
+      {
+        id: Date.now(),
+        role: 'assistant',
+        content: 'D\'acord, he cancel·lat l\'acció. Pots demanar-me qualsevol altra cosa.',
+        timestamp: new Date()
+      }
+    ]);
+  };
+
   const handleChangePersonality = async (personalityType) => {
     try {
       setChangingPersonality(true);
       await changeAIPersonality(personalityType);
-
-      // Actualizar el usuario local
-      setUser({ ...user, ai_personality_type: personalityType });
+      setUser({ ...user, personality_type: personalityType });
       setPersonalityModalVisible(false);
 
-      const successInfo = formatSuccessMessage(`Tu entrenador IA ahora tiene personalidad ${personalityType}`, 'success');
+      const successInfo = formatSuccessMessage(`El teu entrenador IA ara té personalitat ${personalityType}`, 'success');
       infoModal.openModal({
-        title: 'Personalidad actualizada',
+        title: 'Personalitat actualitzada',
         message: successInfo.message,
         icon: successInfo.icon,
         onClose: infoModal.closeModal,
       });
 
-      // Recargar usuario para asegurar que esté sincronizado
       await loadUser();
     } catch (error) {
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: 'Error',
-        message: errorInfo.message || 'No se pudo cambiar la personalidad',
+        message: errorInfo.message || 'No s\'ha pogut canviar la personalitat',
         icon: errorInfo.icon,
       });
     } finally {
@@ -128,45 +191,159 @@ export default function AIChatScreen() {
   };
 
   const getPersonalityIcon = () => {
-    const personality = user?.ai_personality_type || 'motivador';
+    const personality = user?.personality_type || 'motivador';
     switch (personality) {
-      case 'motivador':
-        return 'flame';
-      case 'analitico':
-        return 'analytics';
-      case 'bestia':
-        return 'fitness';
-      case 'relajado':
-        return 'leaf';
-      default:
-        return 'chatbubble';
+      case 'motivador': return 'flame';
+      case 'analitico': return 'analytics';
+      case 'bestia': return 'fitness';
+      case 'relajado': return 'leaf';
+      default: return 'chatbubble';
     }
   };
 
   const getPersonalityColor = () => {
-    const personality = user?.ai_personality_type || 'motivador';
+    const personality = user?.personality_type || 'motivador';
     switch (personality) {
-      case 'motivador':
-        return '#ff6b6b';
-      case 'analitico':
-        return '#4A90E2';
-      case 'bestia':
-        return colors.primaryDark;
-      case 'relajado':
-        return colors.primary;
-      default:
-        return colors.primary;
+      case 'motivador': return '#ff6b6b';
+      case 'analitico': return '#4A90E2';
+      case 'bestia': return colors.primaryDark;
+      case 'relajado': return colors.primary;
+      default: return colors.primary;
     }
   };
 
+  const stripMarkdown = (text) => {
+    if (!text) return text;
+    return text
+      .replace(/\*\*(.+?)\*\*/gs, '$1')
+      .replace(/\*(.+?)\*/gs, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/`{3}[\s\S]*?`{3}/g, '')
+      .replace(/`(.+?)`/g, '$1')
+      .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+      .replace(/^>\s+/gm, '')
+      .replace(/^\s*[-*+]\s+/gm, '• ')
+      .trim();
+  };
+
   const formatTime = (date) => {
-    return date.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return date.toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getActionMeta = (action) => {
+    switch (action.type) {
+      case 'create_workout':
+        return {
+          icon: 'barbell',
+          title: 'Crear Entrenament',
+          color: '#4CAF50',
+          summary: [
+            `Nom: ${action.data.name}`,
+            `Tipus: ${action.data.workout_type} · Dificultat: ${action.data.difficulty}`,
+            `${action.data.exercises?.length || 0} exercicis · ${action.data.estimated_duration_minutes || '?'} min`,
+          ].join('\n')
+        };
+      case 'update_schedule': {
+        const DAY_NAMES = { monday: 'Dilluns', tuesday: 'Dimarts', wednesday: 'Dimecres', thursday: 'Dijous', friday: 'Divendres', saturday: 'Dissabte', sunday: 'Diumenge' };
+        const lines = Object.entries(action.data)
+          .map(([day, val]) => `${DAY_NAMES[day] || day}: ${val ? 'Entrenament assignat' : 'Descans'}`);
+        return {
+          icon: 'calendar',
+          title: 'Actualitzar Planning Setmanal',
+          color: '#4A90E2',
+          summary: lines.join('\n')
+        };
+      }
+      case 'update_profile': {
+        const LABELS = { weight: 'Pes', height: 'Alçada', age: 'Edat' };
+        const UNITS = { weight: ' kg', height: ' cm', age: ' anys' };
+        const lines = Object.entries(action.data)
+          .map(([k, v]) => `${LABELS[k] || k}: ${v}${UNITS[k] || ''}`);
+        return {
+          icon: 'person',
+          title: 'Actualitzar Dades Personals',
+          color: '#ff9800',
+          summary: lines.join('\n')
+        };
+      }
+      case 'log_weight':
+        return {
+          icon: 'scale',
+          title: 'Registrar Pes',
+          color: '#9c27b0',
+          summary: `Pes: ${action.data.weight} kg`
+        };
+      default:
+        return { icon: 'flash', title: 'Acció', color: '#666', summary: '' };
+    }
+  };
+
+  const renderActionCard = (message) => {
+    const { pending_action, actionStatus, id } = message;
+    const meta = getActionMeta(pending_action);
+    const isExecuting = actionStatus === 'executing';
+
+    return (
+      <View key={id} style={styles.actionCardWrapper}>
+        <View style={[styles.actionCard, { borderLeftColor: meta.color }]}>
+          <View style={styles.actionCardHeader}>
+            <View style={[styles.actionCardIcon, { backgroundColor: meta.color + '22' }]}>
+              <Icon name={meta.icon} size={18} color={meta.color} />
+            </View>
+            <Text style={[styles.actionCardTitle, { color: meta.color }]}>{meta.title}</Text>
+          </View>
+
+          <Text style={styles.actionCardSummary}>{meta.summary}</Text>
+
+          {actionStatus === 'pending' && (
+            <View style={styles.actionCardButtons}>
+              <TouchableOpacity
+                style={[styles.actionConfirmBtn, { backgroundColor: meta.color }]}
+                onPress={() => handleConfirmAction(id, pending_action)}
+              >
+                <Icon name="checkmark" size={16} color="white" />
+                <Text style={styles.actionConfirmText}>Confirmar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionCancelBtn}
+                onPress={() => handleCancelAction(id)}
+              >
+                <Icon name="close" size={16} color="#666" />
+                <Text style={styles.actionCancelText}>Cancel·lar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {isExecuting && (
+            <View style={styles.actionExecuting}>
+              <ActivityIndicator size="small" color={meta.color} />
+              <Text style={[styles.actionExecutingText, { color: meta.color }]}>Executant...</Text>
+            </View>
+          )}
+
+          {actionStatus === 'confirmed' && (
+            <View style={styles.actionStatusRow}>
+              <Icon name="checkmark-circle" size={16} color="#4CAF50" />
+              <Text style={styles.actionStatusConfirmed}>Executat correctament</Text>
+            </View>
+          )}
+
+          {actionStatus === 'cancelled' && (
+            <View style={styles.actionStatusRow}>
+              <Icon name="close-circle" size={16} color="#999" />
+              <Text style={styles.actionStatusCancelled}>Cancel·lat</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
   };
 
   const renderMessage = (message) => {
+    if (message.role === 'action') {
+      return renderActionCard(message);
+    }
+
     const isUser = message.role === 'user';
 
     return (
@@ -183,22 +360,11 @@ export default function AIChatScreen() {
           </View>
         )}
 
-        <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userBubble : styles.aiBubble
-          ]}
-        >
-          <Text style={[
-            styles.messageText,
-            isUser ? styles.userText : styles.aiText
-          ]}>
-            {message.content}
+        <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.aiBubble]}>
+          <Text style={[styles.messageText, isUser ? styles.userText : styles.aiText]}>
+            {isUser ? message.content : stripMarkdown(message.content)}
           </Text>
-          <Text style={[
-            styles.messageTime,
-            isUser ? styles.userTime : styles.aiTime
-          ]}>
+          <Text style={[styles.messageTime, isUser ? styles.userTime : styles.aiTime]}>
             {formatTime(message.timestamp)}
           </Text>
         </View>
@@ -228,7 +394,7 @@ export default function AIChatScreen() {
             <View>
               <Text style={styles.headerTitle}>Entrenador IA</Text>
               <Text style={styles.headerSubtitle}>
-                Modo: {user?.ai_personality_type || 'Motivador'}
+                Mode: {user?.personality_type || 'Motivador'}
               </Text>
             </View>
           </View>
@@ -252,7 +418,7 @@ export default function AIChatScreen() {
           {loading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator color={getPersonalityColor()} />
-              <Text style={styles.loadingText}>Pensando...</Text>
+              <Text style={styles.loadingText}>Pensant...</Text>
             </View>
           )}
         </ScrollView>
@@ -261,7 +427,7 @@ export default function AIChatScreen() {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Escribe tu mensaje..."
+            placeholder="Escriu el teu missatge..."
             placeholderTextColor="#999"
             value={inputText}
             onChangeText={setInputText}
@@ -291,7 +457,7 @@ export default function AIChatScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Personalidad del Entrenador</Text>
+                <Text style={styles.modalTitle}>Personalitat de l'Entrenador</Text>
                 <TouchableOpacity onPress={() => setPersonalityModalVisible(false)}>
                   <Icon name="close" size={24} color="#666" />
                 </TouchableOpacity>
@@ -299,113 +465,48 @@ export default function AIChatScreen() {
 
               <ScrollView style={styles.personalitiesContainer}>
                 <Text style={styles.modalDescription}>
-                  Elige cómo quieres que sea tu entrenador IA
+                  Tria com vols que sigui el teu entrenador IA
                 </Text>
 
-                {/* Motivador */}
-                <TouchableOpacity
-                  style={[
-                    styles.personalityCard,
-                    user?.ai_personality_type === 'motivador' && styles.personalityCardActive
-                  ]}
-                  onPress={() => handleChangePersonality('motivador')}
-                  disabled={changingPersonality}
-                >
-                  <View style={[styles.personalityIcon, { backgroundColor: '#ff6b6b' }]}>
-                    <Icon name="flame" size={28} color="white" />
-                  </View>
-                  <View style={styles.personalityInfo}>
-                    <Text style={styles.personalityName}>Motivador</Text>
-                    <Text style={styles.personalityDesc}>
-                      Energético y lleno de ánimo. Te impulsa a superarte cada día.
-                    </Text>
-                  </View>
-                  {user?.ai_personality_type === 'motivador' && (
-                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
-                  )}
-                </TouchableOpacity>
-
-                {/* Analítico */}
-                <TouchableOpacity
-                  style={[
-                    styles.personalityCard,
-                    user?.ai_personality_type === 'analitico' && styles.personalityCardActive
-                  ]}
-                  onPress={() => handleChangePersonality('analitico')}
-                  disabled={changingPersonality}
-                >
-                  <View style={[styles.personalityIcon, { backgroundColor: '#4A90E2' }]}>
-                    <Icon name="analytics" size={28} color="white" />
-                  </View>
-                  <View style={styles.personalityInfo}>
-                    <Text style={styles.personalityName}>Analítico</Text>
-                    <Text style={styles.personalityDesc}>
-                      Basado en datos y ciencia. Te da información precisa y detallada.
-                    </Text>
-                  </View>
-                  {user?.ai_personality_type === 'analitico' && (
-                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
-                  )}
-                </TouchableOpacity>
-
-                {/* Bestia */}
-                <TouchableOpacity
-                  style={[
-                    styles.personalityCard,
-                    user?.ai_personality_type === 'bestia' && styles.personalityCardActive
-                  ]}
-                  onPress={() => handleChangePersonality('bestia')}
-                  disabled={changingPersonality}
-                >
-                  <View style={[styles.personalityIcon, { backgroundColor: colors.primaryDark }]}>
-                    <Icon name="fitness" size={28} color="white" />
-                  </View>
-                  <View style={styles.personalityInfo}>
-                    <Text style={styles.personalityName}>Bestia</Text>
-                    <Text style={styles.personalityDesc}>
-                      Intenso y sin excusas. Te reta a dar el máximo rendimiento.
-                    </Text>
-                  </View>
-                  {user?.ai_personality_type === 'bestia' && (
-                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
-                  )}
-                </TouchableOpacity>
-
-                {/* Relajado */}
-                <TouchableOpacity
-                  style={[
-                    styles.personalityCard,
-                    user?.ai_personality_type === 'relajado' && styles.personalityCardActive
-                  ]}
-                  onPress={() => handleChangePersonality('relajado')}
-                  disabled={changingPersonality}
-                >
-                  <View style={[styles.personalityIcon, { backgroundColor: colors.primary }]}>
-                    <Icon name="leaf" size={28} color="white" />
-                  </View>
-                  <View style={styles.personalityInfo}>
-                    <Text style={styles.personalityName}>Relajado</Text>
-                    <Text style={styles.personalityDesc}>
-                      Amigable y comprensivo. Te apoya con paciencia y calma.
-                    </Text>
-                  </View>
-                  {user?.ai_personality_type === 'relajado' && (
-                    <Icon name="checkmark-circle" size={24} color="#4CAF50" />
-                  )}
-                </TouchableOpacity>
+                {[
+                  { key: 'motivador', icon: 'flame', color: '#ff6b6b', name: 'Motivador', desc: 'Energètic i ple d\'ànim. T\'impulsa a superar-te cada dia.' },
+                  { key: 'analitico', icon: 'analytics', color: '#4A90E2', name: 'Analític', desc: 'Basat en dades i ciència. Et dóna informació precisa i detallada.' },
+                  { key: 'bestia', icon: 'fitness', color: colors.primaryDark, name: 'Bèstia', desc: 'Intens i sense excuses. Et repte a donar el màxim rendiment.' },
+                  { key: 'relajado', icon: 'leaf', color: colors.primary, name: 'Relaxat', desc: 'Amigable i comprensiu. Et dóna suport amb paciència i calma.' },
+                ].map(p => (
+                  <TouchableOpacity
+                    key={p.key}
+                    style={[
+                      styles.personalityCard,
+                      user?.personality_type === p.key && styles.personalityCardActive
+                    ]}
+                    onPress={() => handleChangePersonality(p.key)}
+                    disabled={changingPersonality}
+                  >
+                    <View style={[styles.personalityIcon, { backgroundColor: p.color }]}>
+                      <Icon name={p.icon} size={28} color="white" />
+                    </View>
+                    <View style={styles.personalityInfo}>
+                      <Text style={styles.personalityName}>{p.name}</Text>
+                      <Text style={styles.personalityDesc}>{p.desc}</Text>
+                    </View>
+                    {user?.personality_type === p.key && (
+                      <Icon name="checkmark-circle" size={24} color="#4CAF50" />
+                    )}
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
 
               {changingPersonality && (
                 <View style={styles.loadingOverlay}>
                   <ActivityIndicator size="large" color="#4CAF50" />
-                  <Text style={styles.loadingText}>Actualizando personalidad...</Text>
+                  <Text style={styles.loadingOverlayText}>Actualitzant personalitat...</Text>
                 </View>
               )}
             </View>
           </View>
         </Modal>
 
-        {/* System Modals */}
         <ErrorModal
           visible={errorModal.visible}
           title={errorModal.modalData.title}
@@ -575,6 +676,106 @@ const styles = StyleSheet.create({
   settingsButton: {
     padding: 8,
   },
+  // Action card styles
+  actionCardWrapper: {
+    marginBottom: 15,
+    paddingLeft: 40,
+  },
+  actionCard: {
+    backgroundColor: colors.text.inverse,
+    borderRadius: 14,
+    padding: 14,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  actionCardIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  actionCardTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  actionCardSummary: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  actionCardButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionConfirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  actionConfirmText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  actionCancelBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#ddd',
+    gap: 6,
+  },
+  actionCancelText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  actionExecuting: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 4,
+  },
+  actionExecutingText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  actionStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 4,
+  },
+  actionStatusConfirmed: {
+    fontSize: 13,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  actionStatusCancelled: {
+    fontSize: 13,
+    color: '#999',
+    fontWeight: '600',
+  },
+  // Personality modal
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.background.overlay,
@@ -655,7 +856,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
-  loadingText: {
+  loadingOverlayText: {
     marginTop: 10,
     fontSize: 14,
     color: colors.text.secondary,

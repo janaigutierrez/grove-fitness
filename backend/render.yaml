@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: grove-fitness-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.17.0
+      - key: NODE_ENV
+        value: production
+      # These must be set manually in the Render dashboard (never commit secrets):
+      # MONGODB_URI, JWT_SECRET, JWT_REFRESH_SECRET, GROQ_API_KEY,
+      # CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET

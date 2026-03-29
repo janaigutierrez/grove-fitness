@@ -14,9 +14,11 @@ import { login } from '../services/api';
 import { handleApiError, ValidationError } from '../utils/errorHandler';
 import ErrorModal from '../components/common/ErrorModal';
 import useModal from '../hooks/useModal';
+import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
 
-export default function LoginScreen({ navigation, onLogin }) {
+export default function LoginScreen({ navigation }) {
+    const { login: authLogin } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -26,7 +28,7 @@ export default function LoginScreen({ navigation, onLogin }) {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            const validationError = new ValidationError('Por favor, completa todos los campos');
+            const validationError = new ValidationError('Si us plau, omple tots els camps');
             const errorInfo = handleApiError(validationError);
             errorModal.openModal({
                 title: errorInfo.title,
@@ -42,9 +44,9 @@ export default function LoginScreen({ navigation, onLogin }) {
             const response = await login(email, password);
 
             if (response.accessToken && response.user) {
-                onLogin(response.accessToken, response.user);
+                authLogin(response.accessToken, response.user);
             } else {
-                const errorInfo = handleApiError(new Error('Respuesta inesperada del servidor'));
+                const errorInfo = handleApiError(new Error('Resposta inesperada del servidor'));
                 errorModal.openModal({
                     title: errorInfo.title,
                     message: errorInfo.message,
@@ -55,7 +57,7 @@ export default function LoginScreen({ navigation, onLogin }) {
             const errorInfo = handleApiError(error);
             errorModal.openModal({
                 title: errorInfo.title,
-                message: errorInfo.message || 'Error al iniciar sesión',
+                message: errorInfo.message || 'Error en iniciar sessió',
                 icon: errorInfo.icon,
             });
         } finally {

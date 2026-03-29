@@ -3,6 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError } from '../utils/errorHandler';
 import logger from '../utils/logger';
 
+// ============ CALLBACK DE LOGOUT (evita circular dependency amb AuthContext) ============
+let onUnauthorizedCallback = null;
+
+export const setOnUnauthorizedCallback = (cb) => {
+    onUnauthorizedCallback = cb;
+};
+
 // ============ CONFIGURACIÓ ============
 const getBaseUrl = () => {
     const platform = Platform.OS === 'web' ? 'web' : 'mobile';
@@ -17,7 +24,7 @@ const getBaseUrl = () => {
     if (platform === 'web') {
         return process.env.EXPO_PUBLIC_API_URL_WEB || 'http://localhost:5000/api';
     } else {
-        return process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://192.168.1.138:5000/api';
+        return process.env.EXPO_PUBLIC_API_URL_MOBILE || 'http://localhost:5000/api';
     }
 };
 
@@ -56,9 +63,8 @@ const fetchWithAuth = async (endpoint, options = {}) => {
         if (!response.ok) {
             // Si és 401 (no autoritzat) i no estem en login/register
             if (response.status === 401 && !endpoint.includes('/auth/')) {
-                // Only clear token, don't clear user (let AppNavigator handle logout)
-                // This prevents getting stuck in a half-logged-in state
-                logger.warn('401 Unauthorized - token may be invalid or expired');
+                logger.warn('401 Unauthorized - token expirat o invàlid, forçant logout');
+                if (onUnauthorizedCallback) onUnauthorizedCallback();
             }
 
             throw new ApiError(
@@ -297,10 +303,17 @@ export const analyzeProgress = async () => {
     return fetchWithAuth('/ai/analyze-progress');
 };
 
+export const executeAIAction = async (action) => {
+    return fetchWithAuth('/ai/execute-action', {
+        method: 'POST',
+        body: JSON.stringify({ action })
+    });
+};
+
 export const changeAIPersonality = async (personalityType) => {
     return fetchWithAuth('/ai/personality', {
         method: 'PUT',
-        body: JSON.stringify({ personality_type: personalityType })
+        body: JSON.stringify({ personality: personalityType })
     });
 };
 

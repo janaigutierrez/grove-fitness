@@ -25,6 +25,13 @@ const startSession = async (req, res, next) => {
         const session = await sessionService.startSession(req.user._id, workout_id);
         res.json(session);
     } catch (error) {
+        if (error.activeSessionId) {
+            return res.status(409).json({
+                message: error.message,
+                success: false,
+                activeSessionId: error.activeSessionId
+            });
+        }
         next(error);
     }
 };

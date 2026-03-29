@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -41,9 +42,11 @@ export default function ProgressScreen() {
   const errorModal = useModal();
   const infoModal = useModal();
 
-  useEffect(() => {
-    loadProgressData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadProgressData();
+    }, [])
+  );
 
   const loadProgressData = async () => {
     try {
@@ -56,7 +59,7 @@ export default function ProgressScreen() {
 
       setWeightHistory(weightData.weight_history || []);
       setStats(statsData);
-      setRecentSessions(sessionsData.sessions || []);
+      setRecentSessions(Array.isArray(sessionsData) ? sessionsData : (sessionsData?.sessions || []));
     } catch (error) {
       const errorInfo = handleApiError(error);
       errorModal.openModal({
@@ -79,7 +82,7 @@ export default function ProgressScreen() {
     const weight = parseFloat(newWeight);
 
     if (isNaN(weight) || weight <= 0 || weight > 500) {
-      const validationError = new ValidationError('Por favor ingresa un peso válido (0-500 kg)', 'weight');
+      const validationError = new ValidationError('Si us plau, introdueix un pes vàlid (0-500 kg)', 'weight');
       const errorInfo = handleApiError(validationError);
       errorModal.openModal({
         title: errorInfo.title,
@@ -95,7 +98,7 @@ export default function ProgressScreen() {
       await loadProgressData();
       setAddWeightModal(false);
       setNewWeight('');
-      const successInfo = formatSuccessMessage('Peso registrado correctamente');
+      const successInfo = formatSuccessMessage('Pes registrat correctament');
       infoModal.openModal({
         title: successInfo.title,
         message: successInfo.message,
@@ -159,7 +162,7 @@ export default function ProgressScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Cargando progreso...</Text>
+          <Text style={styles.loadingText}>Carregant progrés...</Text>
         </View>
       </SafeAreaView>
     );
@@ -179,14 +182,14 @@ export default function ProgressScreen() {
         <View style={styles.header}>
           <View style={styles.headerTitleContainer}>
             <TrendingUp size={28} color={colors.primaryDark} />
-            <Text style={styles.title}> Tu Progreso</Text>
+            <Text style={styles.title}> El teu Progrés</Text>
           </View>
           <TouchableOpacity
             style={styles.addWeightBtn}
             onPress={() => setAddWeightModal(true)}
           >
             <PlusCircle size={20} color={colors.text.inverse} />
-            <Text style={styles.addWeightText}>Añadir Peso</Text>
+            <Text style={styles.addWeightText}>Afegir Pes</Text>
           </TouchableOpacity>
         </View>
 
@@ -195,7 +198,7 @@ export default function ProgressScreen() {
           <View style={styles.statCard}>
             <Dumbbell size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{stats?.totalWorkouts || 0}</Text>
-            <Text style={styles.statLabel}>Entrenamientos</Text>
+            <Text style={styles.statLabel}>Entrenaments</Text>
           </View>
 
           <View style={styles.statCard}>
@@ -207,7 +210,7 @@ export default function ProgressScreen() {
           <View style={styles.statCard}>
             <Scale size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{currentWeight ? `${currentWeight}kg` : '-'}</Text>
-            <Text style={styles.statLabel}>Peso actual</Text>
+            <Text style={styles.statLabel}>Pes actual</Text>
           </View>
 
           <View style={styles.statCard}>
@@ -218,20 +221,20 @@ export default function ProgressScreen() {
             ]}>
               {weightChange !== null ? `${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)}kg` : '-'}
             </Text>
-            <Text style={styles.statLabel}>Cambio de peso</Text>
+            <Text style={styles.statLabel}>Canvi de pes</Text>
           </View>
 
           <View style={styles.statCard}>
             <Dumbbell size={24} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statValue}>{stats?.totalWeightLifted ? `${Math.round(stats.totalWeightLifted)}kg` : '0kg'}</Text>
-            <Text style={styles.statLabel}>Peso total levantado</Text>
+            <Text style={styles.statLabel}>Pes total aixecat</Text>
           </View>
         </View>
 
         {/* Weight Chart */}
         {weightHistory.length > 0 ? (
           <View style={styles.chartContainer}>
-            <Text style={styles.sectionTitle}>Historial de Peso (30 días)</Text>
+            <Text style={styles.sectionTitle}>Historial de Pes (30 dies)</Text>
             <LineChart
               data={chartData}
               width={screenWidth - 40}
@@ -259,20 +262,20 @@ export default function ProgressScreen() {
         ) : (
           <View style={styles.emptyChartContainer}>
             <TrendingUp size={48} color={colors.text.disabled} />
-            <Text style={styles.emptyText}>No hay datos de peso</Text>
-            <Text style={styles.emptySubtext}>Añade tu primer registro de peso</Text>
+            <Text style={styles.emptyText}>No hi ha dades de pes</Text>
+            <Text style={styles.emptySubtext}>Afegeix el teu primer registre de pes</Text>
             <TouchableOpacity
               style={styles.emptyButton}
               onPress={() => setAddWeightModal(true)}
             >
-              <Text style={styles.emptyButtonText}>Añadir peso</Text>
+              <Text style={styles.emptyButtonText}>Afegir pes</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Recent Activity */}
         <View style={styles.recentActivityContainer}>
-          <Text style={styles.sectionTitle}>Actividad Reciente</Text>
+          <Text style={styles.sectionTitle}>Activitat Recent</Text>
           {recentSessions.length > 0 ? (
             recentSessions.map((session, index) => {
               const date = new Date(session.completed_at);
@@ -289,9 +292,9 @@ export default function ProgressScreen() {
                     <CheckCircle size={24} color={colors.primary} />
                   </View>
                   <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>{session.workout_id?.name || 'Entrenamiento'}</Text>
+                    <Text style={styles.activityTitle}>{session.workout_id?.name || 'Entrenament'}</Text>
                     <Text style={styles.activityDate}>
-                      {date.toLocaleDateString('es-ES', {
+                      {date.toLocaleDateString('ca-ES', {
                         day: 'numeric',
                         month: 'short',
                         hour: '2-digit',
@@ -301,7 +304,7 @@ export default function ProgressScreen() {
                   </View>
                   <View style={styles.activityStats}>
                     <Text style={styles.activityVolume}>{totalVolume.toFixed(0)}kg</Text>
-                    <Text style={styles.activityVolumeLabel}>volumen</Text>
+                    <Text style={styles.activityVolumeLabel}>volum</Text>
                   </View>
                 </View>
               );
@@ -309,7 +312,7 @@ export default function ProgressScreen() {
           ) : (
             <View style={styles.emptyActivity}>
               <Dumbbell size={32} color={colors.text.disabled} />
-              <Text style={styles.emptyActivityText}>No hay entrenamientos completados</Text>
+              <Text style={styles.emptyActivityText}>No hi ha entrenaments completats</Text>
             </View>
           )}
         </View>
@@ -317,7 +320,7 @@ export default function ProgressScreen() {
         {/* Weight History List */}
         {weightHistory.length > 0 && (
           <View style={styles.weightListContainer}>
-            <Text style={styles.sectionTitle}>Registros de Peso</Text>
+            <Text style={styles.sectionTitle}>Registres de Pes</Text>
             {weightHistory.slice(0, 5).map((entry, index) => {
               const date = new Date(entry.date);
               const prevWeight = index < weightHistory.length - 1 ? weightHistory[index + 1].weight : null;
@@ -327,7 +330,7 @@ export default function ProgressScreen() {
                 <View key={entry._id || index} style={styles.weightItem}>
                   <View style={styles.weightItemLeft}>
                     <Text style={styles.weightItemDate}>
-                      {date.toLocaleDateString('es-ES', {
+                      {date.toLocaleDateString('ca-ES', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric'

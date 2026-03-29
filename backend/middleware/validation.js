@@ -27,7 +27,7 @@ const exerciseFields = {
             'bench', 'kettlebell', 'machine', 'other')
     ),
     default_sets: Joi.number().min(1).max(20),
-    default_reps: Joi.number().min(1).max(100),
+    default_reps: Joi.number().min(1).max(9999),
     default_rest_seconds: Joi.number().min(5).max(600),
     default_duration_seconds: Joi.number().min(5).max(3600),
     default_distance_km: Joi.number().min(0.1).max(100),
@@ -130,7 +130,7 @@ const workoutFields = {
             exercise_id: Joi.string().required(),
             order: Joi.number().min(1).required(),
             custom_sets: Joi.number().min(1).max(20),
-            custom_reps: Joi.number().min(1).max(100),
+            custom_reps: Joi.number().min(1).max(9999),
             custom_rest_seconds: Joi.number().min(0).max(600),
             custom_weight: Joi.string().max(20),
             custom_duration_seconds: Joi.number().min(0).max(3600),

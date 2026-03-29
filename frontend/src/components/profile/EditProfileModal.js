@@ -36,34 +36,34 @@ export default function EditProfileModal({
           </View>
 
           <FormInput
-            placeholder="Nombre"
+            placeholder="Nom"
             value={profileForm.name}
             onChangeText={(text) => onFormChange({ ...profileForm, name: text })}
           />
 
           <FormInput
-            placeholder="Peso (kg)"
+            placeholder="Pes (kg)"
             keyboardType="decimal-pad"
             value={profileForm.weight}
             onChangeText={(text) => onFormChange({ ...profileForm, weight: text })}
           />
 
           <FormInput
-            placeholder="Altura (cm)"
+            placeholder="Alçada (cm)"
             keyboardType="number-pad"
             value={profileForm.height}
             onChangeText={(text) => onFormChange({ ...profileForm, height: text })}
           />
 
           <FormInput
-            placeholder="Edad"
+            placeholder="Edat"
             keyboardType="number-pad"
             value={profileForm.age}
             onChangeText={(text) => onFormChange({ ...profileForm, age: text })}
           />
 
           <Button
-            text="Guardar cambios"
+            text="Desar canvis"
             onPress={onSave}
             loading={loading}
             disabled={loading}

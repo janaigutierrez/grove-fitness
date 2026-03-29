@@ -40,7 +40,8 @@ const getWeeklySchedule = async (userId) => {
 // Actualizar calendario semanal
 const updateWeeklySchedule = async (userId, scheduleData) => {
     // Validar que los workout IDs existen (tanto propios como templates)
-    const workoutIds = Object.values(scheduleData.weekly_schedule || scheduleData).filter(id => id !== null);
+    const allIds = Object.values(scheduleData.weekly_schedule || scheduleData).filter(id => id !== null);
+    const workoutIds = [...new Set(allIds.map(id => id.toString()))]; // dedup (same workout on multiple days)
 
     if (workoutIds.length > 0) {
         const workouts = await Workout.find({

@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "setup": "bash setup.sh",
     "seed-exercises": "node scripts/seedExercises.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --timeout 10000 test/**/*.test.js",
+    "test:coverage": "c8 --reporter=text --reporter=html mocha --timeout 10000 test/**/*.test.js"
   },
   "keywords": [
     "fitness",
@@ -31,6 +32,10 @@
     "multer": "^2.0.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "c8": "^11.0.0",
+    "chai": "^6.2.2",
+    "mocha": "^11.7.5",
+    "nodemon": "^3.0.1",
+    "sinon": "^21.0.3"
   }
 }

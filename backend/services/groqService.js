@@ -68,39 +68,89 @@ const getSystemPrompt = (personality = 'motivador', userContext = {}) => {
     const basePrompt = COACH_PERSONALITIES[personality] || COACH_PERSONALITIES.motivador;
 
     const contextInfo = userContext.name ? `
-L'usuari es diu ${userContext.name}.
-Nivell de fitness: ${userContext.fitness_level || 'intermedi'}
-Equipament disponible: ${userContext.available_equipment?.join(', ') || 'pes corporal'}
-Objectius: ${userContext.goals?.join(', ') || 'fitness general'}
+DADES DE L'USUARI:
+- Nom: ${userContext.name}
+- Nivell fitness: ${userContext.fitness_level || 'intermedi'}
+- Equipament: ${userContext.available_equipment?.join(', ') || 'pes corporal'}
+- Objectius: ${userContext.goals?.join(', ') || 'fitness general'}
+- Ubicació: ${userContext.workout_location || 'casa'}
+- Temps/sessió: ${userContext.time_per_session || 45} min
+- Dies/setmana: ${userContext.days_per_week || 3}
+${userContext.weight_kg ? `- Pes actual: ${userContext.weight_kg} kg` : ''}
+${userContext.height_cm ? `- Alçada: ${userContext.height_cm} cm` : ''}
+${userContext.age ? `- Edat: ${userContext.age} anys` : ''}
 
-${userContext.recent_sessions?.length > 0 ? `
-HISTORIAL RECENT:
-${userContext.recent_sessions.map(s =>
-        `- ${s.workout} (Dificultat: ${s.difficulty}/10, Energia: ${s.energy}/10, Humor: ${s.mood})`
-    ).join('\n')}
-
-Dificultat mitjana dels últims entrenaments: ${userContext.avg_difficulty}/10
+${userContext.weight_history?.length > 0 ? `HISTORIAL DE PES (últimes entrades):
+${userContext.weight_history.slice(0, 5).map(w => `- ${w.weight} kg (${new Date(w.date).toLocaleDateString('ca-ES')})`).join('\n')}
 ` : ''}
 
-${userContext.top_exercises?.length > 0 ? `
-Exercicis favorits (més fets):
+${userContext.recent_sessions?.length > 0 ? `SESSIONS RECENTS:
+${userContext.recent_sessions.map(s =>
+        `- ${s.workout} (RPE: ${s.difficulty}/10, Energia: ${s.energy}/10, Ànim: ${s.mood})`
+    ).join('\n')}
+Dificultat mitjana: ${userContext.avg_difficulty}/10
+` : ''}
+
+${userContext.top_exercises?.length > 0 ? `EXERCICIS MÉS FETS:
 ${userContext.top_exercises.map(e => `- ${e.name} (${e.times} vegades)`).join('\n')}
 ` : ''}
 
-IMPORTANT: Tingues en compte aquest històric per adaptar la dificultat i els exercicis.
+${userContext.existing_workouts?.length > 0 ? `ENTRENAMENTS EXISTENTS:
+${userContext.existing_workouts.map(w => `- "${w.name}" (ID: ${w.id})`).join('\n')}
+` : ''}
 ` : '';
+
+    const actionsPrompt = `
+ACCIONS QUE POTS FER:
+Pots crear entrenaments, actualitzar el planning setmanal, actualitzar dades personals i registrar el pes.
+
+FLUX DE TREBALL OBLIGATORI EN 2 FASES:
+FASE 1 - RECOPILAR INFORMACIÓ (MAI incloguis [ACTION] aquí):
+  1. Fes preguntes per entendre exactament el que vol l'usuari
+  2. Recull tota la informació necessària (nom, exercicis, sèries, temps, etc.)
+  3. Presenta un RESUM COMPLET del que faràs
+  4. Pregunta: "Vols que ho creï/actualitzi?"
+
+FASE 2 - ACCIÓ (ÚNICAMENT quan l'usuari confirma explícitament):
+  - Si l'usuari diu "sí", "d'acord", "endavant", "crea-ho", "confirmo" → inclou l'acció
+  - Si ENCARA estàs recopilant informació → MAI incloguis [ACTION]
+  - Si no tens TOTA la informació necessària → MAI incloguis [ACTION]
+
+Quan l'usuari confirma, inclou al FINAL del missatge UN ÚNIC bloc d'acció:
+
+[ACTION]{"type":"create_workout","data":{"name":"...","description":"...","workout_type":"push|pull|legs|full_body|cardio|custom","difficulty":"beginner|intermediate|advanced","estimated_duration_minutes":45,"exercises":[{"name":"...","type":"reps|time|cardio","category":"chest|back|legs|shoulders|arms|core|cardio","sets":3,"reps":10,"rest_seconds":60}]}}[/ACTION]
+
+[ACTION]{"type":"update_schedule","data":{"monday":"ID_REAL_DE_ENTRENAMENT_O_null","tuesday":null,"wednesday":"ID_REAL","thursday":null,"friday":"ID_REAL","saturday":null,"sunday":null}}[/ACTION]
+
+[ACTION]{"type":"update_profile","data":{"weight":75,"height":175,"age":28}}[/ACTION]
+
+[ACTION]{"type":"log_weight","data":{"weight":75}}[/ACTION]
+
+VALORS VÀLIDS (OBLIGATORI, SEMPRE en anglès, mai traduïts):
+- workout_type: push, pull, legs, full_body, cardio, custom
+- difficulty: beginner, intermediate, advanced (MAI "fàcil", "intermedi", "avançat", "mitjà")
+- exercise.type: reps, time, cardio
+- exercise.category: chest, back, legs, shoulders, arms, core, cardio
+
+REGLES CRÍTIQUES:
+- MAI incloguis [ACTION] sense confirmació explícita de l'usuari
+- Per update_schedule: usa EXCLUSIVAMENT els IDs numèrics de la llista "ENTRENAMENTS EXISTENTS"
+- Si l'usuari vol assignar un entrenament nou (que no existeix), primer crea'l, i en el PROPERE missatge fes update_schedule
+- MAI inventes IDs o uses noms com a IDs (ex: "nou_entrenament_abs" NO és vàlid)
+- Si no tens IDs reals dels entrenaments, NO facis update_schedule
+`;
 
     return `${basePrompt}
 
 ${contextInfo}
 
-REGLES IMPORTANTS:
-1. Respon SEMPRE en l'idioma en què l'usuari t'escriu (català, castellà, anglès, etc.)
+${actionsPrompt}
+
+REGLES GENERALS:
+1. Respon SEMPRE en l'idioma en què l'usuari t'escriu (català per defecte)
 2. Sigues concís però complet
-3. Si et demanen generar un pla d'entrenament, retorna un JSON estructurat
-4. Si és conversa normal, respon en text natural
-5. Mantén sempre la teva personalitat de coach
-6. Si els prompts de l'usuari no tenen res a veure amb entrenament, recondueix educadament cap al fitness
+3. Mantén sempre la teva personalitat de coach
+4. Si el tema no és fitness, recondueix educadament
 `;
 };
 

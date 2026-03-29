@@ -5,7 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,7 +20,7 @@ import InfoModal from '../components/common/InfoModal';
 import useModal from '../hooks/useModal';
 import colors from '../constants/colors';
 
-export default function OnboardingScreen({ route, onComplete }) {
+export default function OnboardingScreen({ route }) {
   const { token, user } = route?.params || {};
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -40,79 +43,85 @@ export default function OnboardingScreen({ route, onComplete }) {
 
   const steps = [
     {
-      title: '¿Cuál es tu nivel de fitness?',
+      title: 'Quin és el teu nivell de fitness?',
       icon: 'fitness',
       options: [
-        { value: 'principiante', label: 'Principiante', desc: 'Nuevo en el entrenamiento' },
-        { value: 'intermedio', label: 'Intermedio', desc: 'Entreno regularmente' },
-        { value: 'avanzado', label: 'Avanzado', desc: 'Muy experimentado' }
+        { value: 'principiante', label: 'Principiant', desc: 'Nou en l\'entrenament' },
+        { value: 'intermedio', label: 'Intermedi', desc: 'Entreno regularment' },
+        { value: 'avanzado', label: 'Avançat', desc: 'Molt experimentat' }
       ],
       field: 'fitness_level',
       type: 'single'
     },
     {
-      title: '¿Dónde vas a entrenar?',
+      title: 'On vas a entrenar?',
       icon: 'home',
       options: [
-        { value: 'gimnasio', label: 'Gimnasio', desc: 'Equipo completo' },
-        { value: 'casa', label: 'Casa', desc: 'Espacio limitado' },
-        { value: 'parque', label: 'Parque', desc: 'Al aire libre' },
-        { value: 'mixto', label: 'Mixto', desc: 'Varía según el día' }
+        { value: 'gimnasio', label: 'Gimnàs', desc: 'Equipament complet' },
+        { value: 'casa', label: 'Casa', desc: 'Espai limitat' },
+        { value: 'parque', label: 'Parc', desc: 'A l\'aire lliure' },
+        { value: 'mixto', label: 'Mixt', desc: 'Varia segons el dia' }
       ],
       field: 'workout_location',
       type: 'single'
     },
     {
-      title: '¿Qué equipo tienes disponible?',
+      title: 'Quin equipament tens disponible?',
       icon: 'barbell',
       options: [
-        { value: 'ninguno', label: 'Sin equipo', icon: 'body' },
-        { value: 'mancuernas', label: 'Mancuernas', icon: 'fitness' },
-        { value: 'barra', label: 'Barra y discos', icon: 'barbell' },
-        { value: 'bandas', label: 'Bandas elásticas', icon: 'git-branch' },
-        { value: 'completo', label: 'Gimnasio completo', icon: 'business' }
+        { value: 'ninguno', label: 'Sense equip', icon: 'body' },
+        { value: 'mancuernas', label: 'Manuelles', icon: 'fitness' },
+        { value: 'barra', label: 'Barra i discos', icon: 'barbell' },
+        { value: 'bandas', label: 'Bandes elàstiques', icon: 'git-branch' },
+        { value: 'completo', label: 'Gimnàs complet', icon: 'business' }
       ],
       field: 'available_equipment',
       type: 'multiple'
     },
     {
-      title: '¿Cuánto tiempo puedes entrenar?',
+      title: 'Quant de temps pots entrenar?',
       icon: 'time',
       options: [
-        { value: '30', label: '30 minutos', desc: 'Sesiones cortas' },
-        { value: '45', label: '45 minutos', desc: 'Duración media' },
-        { value: '60', label: '60 minutos', desc: 'Sesión completa' },
-        { value: '90', label: '90+ minutos', desc: 'Sesiones largas' }
+        { value: '30', label: '30 minuts', desc: 'Sessions curtes' },
+        { value: '45', label: '45 minuts', desc: 'Durada mitjana' },
+        { value: '60', label: '60 minuts', desc: 'Sessió completa' },
+        { value: '90', label: '90+ minuts', desc: 'Sessions llargues' }
       ],
       field: 'time_per_session',
       type: 'single'
     },
     {
-      title: '¿Cuántos días por semana entrenarás?',
+      title: 'Quants dies per setmana entrenaràs?',
       icon: 'calendar',
       options: [
-        { value: '2', label: '2 días', desc: 'Inicio suave' },
-        { value: '3', label: '3 días', desc: 'Balance perfecto' },
-        { value: '4', label: '4 días', desc: 'Progreso sólido' },
-        { value: '5', label: '5 días', desc: 'Dedicación alta' },
-        { value: '6', label: '6+ días', desc: 'Máximo rendimiento' }
+        { value: '2', label: '2 dies', desc: 'Inici suau' },
+        { value: '3', label: '3 dies', desc: 'Balanç perfecte' },
+        { value: '4', label: '4 dies', desc: 'Progrés sòlid' },
+        { value: '5', label: '5 dies', desc: 'Dedicació alta' },
+        { value: '6', label: '6+ dies', desc: 'Màxim rendiment' }
       ],
       field: 'days_per_week',
       type: 'single'
     },
     {
-      title: '¿Cuáles son tus objetivos?',
+      title: 'Quins són els teus objectius?',
       icon: 'trophy',
       options: [
-        { value: 'ganar_musculo', label: 'Ganar músculo', icon: 'trending-up' },
-        { value: 'perder_grasa', label: 'Perder grasa', icon: 'flame' },
-        { value: 'fuerza', label: 'Aumentar fuerza', icon: 'fitness' },
-        { value: 'resistencia', label: 'Mejorar resistencia', icon: 'pulse' },
-        { value: 'salud', label: 'Salud general', icon: 'heart' },
-        { value: 'rendimiento', label: 'Rendimiento deportivo', icon: 'basketball' }
+        { value: 'ganar_musculo', label: 'Guanyar múscul', icon: 'trending-up' },
+        { value: 'perder_grasa', label: 'Perdre greix', icon: 'flame' },
+        { value: 'fuerza', label: 'Augmentar força', icon: 'fitness' },
+        { value: 'resistencia', label: 'Millorar resistència', icon: 'pulse' },
+        { value: 'salud', label: 'Salut general', icon: 'heart' },
+        { value: 'rendimiento', label: 'Rendiment esportiu', icon: 'basketball' }
       ],
       field: 'goals',
       type: 'multiple'
+    },
+    {
+      title: 'Dades físiques (opcional)',
+      icon: 'body',
+      type: 'physical',
+      field: 'physical'
     }
   ];
 
@@ -143,6 +152,7 @@ export default function OnboardingScreen({ route, onComplete }) {
   };
 
   const canProceed = () => {
+    if (currentStepData.type === 'physical') return true; // always optional
     const field = currentStepData.field;
     if (currentStepData.type === 'single') {
       return preferences[field] !== '';
@@ -179,30 +189,35 @@ export default function OnboardingScreen({ route, onComplete }) {
         goals: preferences.goals
       });
 
-      const successInfo = formatSuccessMessage('¡Todo listo para empezar! Vamos a crear tu primera rutina personalizada.', 'success');
+      // Guardar dades físiques si s'han introduït
+      const physicalData = {};
+      if (preferences.weight) physicalData.weight = parseFloat(preferences.weight);
+      if (preferences.height) physicalData.height = parseFloat(preferences.height);
+      if (preferences.age) physicalData.age = parseInt(preferences.age);
+      if (Object.keys(physicalData).length > 0) {
+        await updateUserProfile(physicalData);
+      }
+
+      const successInfo = formatSuccessMessage('Tot llest per començar! Anem a crear la teva primera rutina personalitzada.', 'success');
       infoModal.openModal({
-        title: '🎉 ¡Configuración completa!',
+        title: '🎉 Configuració completa!',
         message: successInfo.message,
         icon: successInfo.icon,
-        buttonText: 'Comenzar',
+        buttonText: 'Començar',
         onClose: () => {
           infoModal.closeModal();
-          if (onComplete) {
-            onComplete(token, user);
-          }
+          // El login ja és actiu (fet a RegisterScreen), la navegació es fa sola
         }
       });
     } catch (error) {
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: 'Error',
-        message: 'No se pudieron guardar las preferencias. Puedes configurarlas más tarde desde el perfil.',
+        message: 'No s\'han pogut guardar les preferències. Pots configurar-les més tard des del perfil.',
         icon: errorInfo.icon,
         onClose: () => {
           errorModal.closeModal();
-          if (onComplete) {
-            onComplete(token, user);
-          }
+          // El login ja és actiu
         }
       });
     } finally {
@@ -242,9 +257,51 @@ export default function OnboardingScreen({ route, onComplete }) {
     );
   };
 
+  const renderPhysicalStep = () => (
+    <ScrollView style={styles.optionsContainer} contentContainerStyle={styles.optionsContent} keyboardShouldPersistTaps="handled">
+      <View style={styles.physicalField}>
+        <Text style={styles.physicalLabel}>Pes (kg)</Text>
+        <TextInput
+          style={styles.physicalInput}
+          placeholder="Ex: 70"
+          placeholderTextColor="rgba(255,255,255,0.4)"
+          value={preferences.weight}
+          onChangeText={v => setPreferences({ ...preferences, weight: v })}
+          keyboardType="decimal-pad"
+        />
+      </View>
+      <View style={styles.physicalField}>
+        <Text style={styles.physicalLabel}>Alçada (cm)</Text>
+        <TextInput
+          style={styles.physicalInput}
+          placeholder="Ex: 175"
+          placeholderTextColor="rgba(255,255,255,0.4)"
+          value={preferences.height}
+          onChangeText={v => setPreferences({ ...preferences, height: v })}
+          keyboardType="number-pad"
+        />
+      </View>
+      <View style={styles.physicalField}>
+        <Text style={styles.physicalLabel}>Edat (anys)</Text>
+        <TextInput
+          style={styles.physicalInput}
+          placeholder="Ex: 28"
+          placeholderTextColor="rgba(255,255,255,0.4)"
+          value={preferences.age}
+          onChangeText={v => setPreferences({ ...preferences, age: v })}
+          keyboardType="number-pad"
+        />
+      </View>
+      <Text style={styles.physicalNote}>
+        Aquestes dades ajuden a personalitzar els teus entrenaments. Pots omplir-les ara o més tard des del perfil.
+      </Text>
+    </ScrollView>
+  );
+
   return (
     <LinearGradient colors={[colors.primary, colors.primaryDark]} style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.container}>
           {/* Progress Bar */}
           <View style={styles.progressContainer}>
@@ -266,11 +323,15 @@ export default function OnboardingScreen({ route, onComplete }) {
             <Icon name={currentStepData.icon} size={48} color="white" style={styles.headerIcon} />
             <Text style={styles.title}>{currentStepData.title}</Text>
             {currentStepData.type === 'multiple' && (
-              <Text style={styles.subtitle}>Puedes seleccionar múltiples opciones</Text>
+              <Text style={styles.subtitle}>Pots seleccionar múltiples opcions</Text>
+            )}
+            {currentStepData.type === 'physical' && (
+              <Text style={styles.subtitle}>Opcional — podràs modificar-les al perfil</Text>
             )}
           </View>
 
-          {/* Options */}
+          {/* Options or Physical step */}
+          {currentStepData.type === 'physical' ? renderPhysicalStep() : (
           <ScrollView
             style={styles.optionsContainer}
             contentContainerStyle={styles.optionsContent}
@@ -278,6 +339,7 @@ export default function OnboardingScreen({ route, onComplete }) {
           >
             {currentStepData.options.map(renderOption)}
           </ScrollView>
+          )}
 
           {/* Buttons */}
           <View style={styles.buttonsContainer}>
@@ -288,7 +350,7 @@ export default function OnboardingScreen({ route, onComplete }) {
                 disabled={loading}
               >
                 <Icon name="arrow-back" size={20} color="white" />
-                <Text style={styles.backButtonText}>Atrás</Text>
+                <Text style={styles.backButtonText}>Enrere</Text>
               </TouchableOpacity>
             )}
 
@@ -306,7 +368,7 @@ export default function OnboardingScreen({ route, onComplete }) {
               ) : (
                 <>
                   <Text style={styles.nextButtonText}>
-                    {currentStep === steps.length - 1 ? 'Finalizar' : 'Siguiente'}
+                    {currentStep === steps.length - 1 ? 'Finalitzar' : 'Següent'}
                   </Text>
                   <Icon name="arrow-forward" size={20} color="white" />
                 </>
@@ -331,6 +393,7 @@ export default function OnboardingScreen({ route, onComplete }) {
             onClose={infoModal.modalData.onClose || infoModal.closeModal}
           />
         </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -460,5 +523,30 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  physicalField: {
+    marginBottom: 20,
+  },
+  physicalLabel: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  physicalInput: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: 'white',
+  },
+  physicalNote: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 10,
+    lineHeight: 20,
   },
 });

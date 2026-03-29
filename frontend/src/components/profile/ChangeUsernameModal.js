@@ -28,21 +28,21 @@ export default function ChangeUsernameModal({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Cambiar Nombre de Usuario</Text>
+            <Text style={styles.modalTitle}>Canviar Nom d'Usuari</Text>
             <TouchableOpacity onPress={onClose}>
               <Icon name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
 
           <FormInput
-            label="Nombre de usuario"
-            placeholder="Nuevo nombre de usuario"
+            label="Nom d'usuari"
+            placeholder="Nou nom d'usuari"
             value={username}
             onChangeText={onUsernameChange}
           />
 
           <Button
-            text="Cambiar"
+            text="Canviar"
             onPress={onSave}
             loading={loading}
             disabled={loading}

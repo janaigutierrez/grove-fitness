@@ -10,9 +10,11 @@ import { handleApiError, formatSuccessMessage } from '../utils/errorHandler';
 import ErrorModal from '../components/common/ErrorModal';
 import InfoModal from '../components/common/InfoModal';
 import useModal from '../hooks/useModal';
+import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
 
-export default function DashboardScreen({ user }) {
+export default function DashboardScreen() {
+  const { user } = useAuth();
   const isFocused = useIsFocused();
   const [stats, setStats] = useState(null);
   const [todayWorkout, setTodayWorkout] = useState(null);
@@ -274,7 +276,7 @@ export default function DashboardScreen({ user }) {
                   <TouchableOpacity
                     style={styles.startButton}
                     onPress={() => {
-                      const infoMessage = formatSuccessMessage('Navega a WorkoutScreen para comenzar!', 'info');
+                      const infoMessage = formatSuccessMessage('Navega a la pestanya Workout per començar!', 'info');
                       infoModal.openModal({
                         title: 'Workout',
                         message: infoMessage.message,

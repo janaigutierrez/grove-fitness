@@ -1,8 +1,25 @@
 const groqService = require('./groqService');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Workout = require('../models/Workout');
 const Exercise = require('../models/Exercise');
 const WorkoutSession = require('../models/WorkoutSession');
+const profileService = require('./profileService');
+const userService = require('./userService');
+
+// Parse action block from AI response: [ACTION]{...}[/ACTION]
+const parseActionFromResponse = (text) => {
+    const match = text.match(/\[ACTION\]([\s\S]*?)\[\/ACTION\]/);
+    if (!match) return { cleanText: text, action: null };
+    try {
+        const action = JSON.parse(match[1].trim());
+        const cleanText = text.replace(/\[ACTION\][\s\S]*?\[\/ACTION\]/g, '').trim();
+        return { cleanText, action };
+    } catch {
+        const cleanText = text.replace(/\[ACTION\][\s\S]*?\[\/ACTION\]/g, '').trim();
+        return { cleanText, action: null };
+    }
+};
 
 // Helper: Obtener contexto del usuario
 const getUserContext = async (userId) => {
@@ -34,6 +51,17 @@ const getUserContext = async (userId) => {
         .limit(5)
         .select('name times_performed');
 
+    // Últimes 10 entrades de pes corporal
+    const weightHistory = (user.weight_history || [])
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 10)
+        .map(w => ({ weight: w.weight, date: w.date }));
+
+    // Entrenaments existents de l'usuari (per al planning)
+    const existingWorkouts = await Workout.find({ user_id: userId, is_template: true })
+        .select('_id name workout_type')
+        .limit(20);
+
     return {
         name: user.name,
         fitness_level: user.fitness_level,
@@ -44,7 +72,13 @@ const getUserContext = async (userId) => {
         goals: user.goals || [],
         personality: user.personality_type || 'motivador',
 
-        // HISTÒRIC
+        // DADES FÍSIQUES
+        weight_kg: user.weight || null,
+        height_cm: user.height || null,
+        age: user.age || null,
+        weight_history: weightHistory,
+
+        // ÚLTIMES SESSIONS
         recent_sessions: recentSessions.map(s => ({
             workout: s.workout_id?.name,
             difficulty: s.perceived_difficulty,
@@ -58,7 +92,12 @@ const getUserContext = async (userId) => {
             times: e.times_performed
         })),
         personal_bests: user.personal_bests || {},
-        current_weights: user.current_weights || {}
+        current_weights: user.current_weights || {},
+        existing_workouts: existingWorkouts.map(w => ({
+            id: w._id.toString(),
+            name: w.name,
+            type: w.workout_type
+        }))
     };
 };
 
@@ -104,14 +143,17 @@ const chatWithAI = async (userId, message) => {
         throw error;
     }
 
-    // Guardar en historial
+    // Parsejar acció del missatge si n'hi ha
+    const { cleanText, action } = parseActionFromResponse(result.response);
+
+    // Guardar en historial (el text net, sense el bloc d'acció)
     if (!user.ai_context_history) {
         user.ai_context_history = [];
     }
 
     user.ai_context_history.push(
         { role: 'user', content: message },
-        { role: 'assistant', content: result.response }
+        { role: 'assistant', content: cleanText }
     );
 
     // Mantenir només últims 20 missatges
@@ -122,33 +164,118 @@ const chatWithAI = async (userId, message) => {
     await user.save();
 
     return {
-        response: result.response,
+        response: cleanText,
+        pending_action: action || null,
         personality: userContext.personality,
         usage: result.usage
     };
 };
 
+// Executar una acció confirmada per l'usuari
+const executeAction = async (userId, action) => {
+    if (!action || !action.type || !action.data) {
+        const error = new Error('Invalid action');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    switch (action.type) {
+        case 'create_workout': {
+            const result = await generateAIWorkout(userId, null, true, action.data);
+            return {
+                type: 'create_workout',
+                message: `Entrenament "${result.workout?.name}" creat correctament!`,
+                data: result.workout
+            };
+        }
+
+        case 'update_schedule': {
+            const scheduleData = action.data;
+            const user = await User.findById(userId);
+            if (!user) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+
+            const validKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            const schedule = {};
+            for (const day of validKeys) {
+                if (day in scheduleData) {
+                    const val = scheduleData[day];
+                    if (val !== null && val !== undefined) {
+                        if (!mongoose.Types.ObjectId.isValid(val)) {
+                            const error = new Error(`ID d'entrenament invàlid per a "${day}": "${val}". Usa els IDs reals dels entrenaments existents.`);
+                            error.statusCode = 400;
+                            throw error;
+                        }
+                        schedule[day] = val;
+                    } else {
+                        schedule[day] = null;
+                    }
+                }
+            }
+            user.weekly_schedule = { ...user.weekly_schedule, ...schedule };
+            await user.save();
+            return {
+                type: 'update_schedule',
+                message: 'Planning setmanal actualitzat!',
+                data: schedule
+            };
+        }
+
+        case 'update_profile': {
+            const updated = await userService.updateProfile(userId, action.data);
+            return {
+                type: 'update_profile',
+                message: 'Dades personals actualitzades!',
+                data: updated
+            };
+        }
+
+        case 'log_weight': {
+            const weight = parseFloat(action.data.weight);
+            if (!weight || weight < 20 || weight > 400) {
+                const error = new Error('Pes no vàlid');
+                error.statusCode = 400;
+                throw error;
+            }
+            const result = await profileService.addWeightEntry(userId, weight);
+            return {
+                type: 'log_weight',
+                message: `Pes de ${weight} kg registrat!`,
+                data: { weight, current_weight: result.current_weight }
+            };
+        }
+
+        default: {
+            const error = new Error(`Unknown action type: ${action.type}`);
+            error.statusCode = 400;
+            throw error;
+        }
+    }
+};
+
 // Generar workout con IA
-const generateAIWorkout = async (userId, prompt, saveToLibrary = true) => {
-    if (!prompt || prompt.trim() === '') {
+const generateAIWorkout = async (userId, prompt, saveToLibrary = true, workoutDataOverride = null) => {
+    if (!workoutDataOverride && (!prompt || prompt.trim() === '')) {
         const error = new Error('Prompt is required');
         error.statusCode = 400;
         throw error;
     }
 
-    const userContext = await getUserContext(userId);
+    let workoutData;
 
-    // Generar workout
-    const result = await groqService.generateWorkout(prompt, userContext);
-
-    if (!result.success) {
-        const error = new Error(result.error || 'Failed to generate workout');
-        error.statusCode = 500;
-        error.raw_response = result.raw_response;
-        throw error;
+    if (workoutDataOverride) {
+        // Use workout data provided directly by AI agent action (skip Groq call)
+        workoutData = workoutDataOverride;
+    } else {
+        const userContext = await getUserContext(userId);
+        const result = await groqService.generateWorkout(prompt, userContext);
+        if (!result.success) {
+            const error = new Error(result.error || 'Failed to generate workout');
+            error.statusCode = 500;
+            error.raw_response = result.raw_response;
+            throw error;
+        }
+        workoutData = result.workout;
     }
-
-    const workoutData = result.workout;
 
     // Si save_to_library, crear ejercicios y workout
     if (saveToLibrary) {
@@ -444,6 +571,7 @@ Responde SOLO con JSON en este formato exacto:
 
 module.exports = {
     chatWithAI,
+    executeAction,
     generateAIWorkout,
     generateStarterWorkout,
     analyzeUserProgress,

@@ -8,9 +8,18 @@ const updateProfile = async (userId, updateData) => {
     delete updateData.password;
     delete updateData.email;
 
+    const update = { $set: updateData };
+
+    // Si s'actualitza el pes, afegir-lo a l'historial
+    if (updateData.weight) {
+        update.$push = {
+            weight_history: { weight: updateData.weight, date: new Date() }
+        };
+    }
+
     const user = await User.findByIdAndUpdate(
         userId,
-        { $set: updateData },
+        update,
         { new: true }
     ).select('-password');
 

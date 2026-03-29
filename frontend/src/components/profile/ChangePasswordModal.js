@@ -28,38 +28,38 @@ export default function ChangePasswordModal({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Cambiar Contraseña</Text>
+            <Text style={styles.modalTitle}>Canviar Contrasenya</Text>
             <TouchableOpacity onPress={onClose}>
               <Icon name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
 
           <FormInput
-            label="Contraseña actual"
-            placeholder="Ingresa tu contraseña actual"
+            label="Contrasenya actual"
+            placeholder="Introdueix la teva contrasenya actual"
             secureTextEntry
             value={passwordForm.current}
             onChangeText={(text) => onFormChange({ ...passwordForm, current: text })}
           />
 
           <FormInput
-            label="Nueva contraseña"
-            placeholder="Mínimo 6 caracteres"
+            label="Nova contrasenya"
+            placeholder="Mínim 6 caràcters"
             secureTextEntry
             value={passwordForm.new}
             onChangeText={(text) => onFormChange({ ...passwordForm, new: text })}
           />
 
           <FormInput
-            label="Confirmar nueva contraseña"
-            placeholder="Vuelve a ingresar la nueva contraseña"
+            label="Confirmar nova contrasenya"
+            placeholder="Torna a introduir la nova contrasenya"
             secureTextEntry
             value={passwordForm.confirm}
             onChangeText={(text) => onFormChange({ ...passwordForm, confirm: text })}
           />
 
           <Button
-            text="Cambiar contraseña"
+            text="Canviar contrasenya"
             onPress={onSave}
             loading={loading}
             disabled={loading}

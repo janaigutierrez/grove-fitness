@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ImageBackground,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Dumbbell, Calendar, Play, Sparkles, Plus } from 'lucide-react-native';
+import { Dumbbell, Calendar, Play, Plus } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   getWorkouts,
@@ -19,11 +19,12 @@ import {
   completeWorkoutSession,
   abandonSession,
   createWorkout,
+  updateWorkout,
   getExercises,
-  createExercise
+  createExercise,
+  getWorkoutSessions
 } from '../services/api';
 import { handleApiError, formatSuccessMessage, ValidationError } from '../utils/errorHandler';
-import AIWorkoutGeneratorModal from '../components/AIWorkoutGeneratorModal';
 import WorkoutCompletionModal from '../components/WorkoutCompletionModal';
 import ActiveWorkoutScreen from '../components/workout/ActiveWorkoutScreen';
 import CreateWorkoutModal from '../components/workout/CreateWorkoutModal';
@@ -35,7 +36,7 @@ import ErrorModal from '../components/common/ErrorModal';
 import useModal from '../hooks/useModal';
 import colors from '../constants/colors';
 
-export default function WorkoutScreen({ user }) {
+export default function WorkoutScreen() {
   // Estados principals
   const [workouts, setWorkouts] = useState([]);
   const [weekSchedule, setWeekSchedule] = useState(null);
@@ -48,9 +49,9 @@ export default function WorkoutScreen({ user }) {
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [completedSets, setCompletedSets] = useState([]);
 
-  // Modal de creació de workout
+  // Modal de creació/edició de workout
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [aiGeneratorVisible, setAiGeneratorVisible] = useState(false);
+  const [editingWorkoutId, setEditingWorkoutId] = useState(null); // null = create, string = edit
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [completingSession, setCompletingSession] = useState(false);
   const [newWorkout, setNewWorkout] = useState({
@@ -60,7 +61,7 @@ export default function WorkoutScreen({ user }) {
     difficulty: 'intermediate',
   });
   const [newExercises, setNewExercises] = useState([
-    { name: '', sets: '3', reps: '10', exercise_id: null, newExercise: null }
+    { name: '', sets: '3', reps: '10', type: 'reps', exercise_id: null, newExercise: null }
   ]);
   const [creating, setCreating] = useState(false);
   const [availableExercises, setAvailableExercises] = useState([]);
@@ -70,22 +71,57 @@ export default function WorkoutScreen({ user }) {
   const infoModal = useModal();
   const errorModal = useModal();
 
-  useEffect(() => {
-    loadWorkoutData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkoutData();
+    }, [])
+  );
 
   const loadWorkoutData = async () => {
     try {
       setLoading(true);
 
-      const [workoutsData, scheduleData] = await Promise.all([
-        getWorkouts({ is_template: 'true' }), // Solo plantillas
-        getWeeklySchedule()
+      const [workoutsData, scheduleData, sessionsData] = await Promise.all([
+        getWorkouts({ is_template: 'true' }),
+        getWeeklySchedule(),
+        getWorkoutSessions({ completed: 'false' })
       ]);
-
 
       setWorkouts(workoutsData);
       setWeekSchedule(scheduleData);
+
+      // Detectar sessió activa (interrompuda per sortir de l'app)
+      const activeSessions = Array.isArray(sessionsData) ? sessionsData : (sessionsData?.sessions || []);
+      const activeSession = activeSessions.find(s => !s.completed && !s.abandoned);
+
+      if (activeSession && !modalVisible) {
+        const resumeWorkout = workoutsData.find(w => w.id === activeSession.workout_id?.id);
+
+        if (resumeWorkout) {
+          confirmModal.openModal({
+            title: 'Entrenament pendent',
+            message: `Tens l'entrenament "${resumeWorkout.name}" en curs. Vols reprendre'l o abandonar-lo?`,
+            confirmText: 'Reprendre',
+            cancelText: 'Abandonar',
+            variant: 'info',
+            icon: 'play-circle',
+            onConfirm: () => {
+              confirmModal.closeModal();
+              setCurrentSessionId(activeSession.id);
+              setSelectedWorkout(resumeWorkout);
+              setCompletedSets([]);
+              setModalVisible(true);
+            },
+            onCancel: async () => {
+              confirmModal.closeModal();
+              try { await abandonSession(activeSession.id, "Abandonada per l'usuari"); } catch {}
+            },
+          });
+        } else {
+          // Workout eliminat — netejar la sessió òrfena
+          abandonSession(activeSession.id, 'Workout eliminat').catch(() => {});
+        }
+      }
 
     } catch (error) {
       const errorInfo = handleApiError(error);
@@ -116,6 +152,32 @@ export default function WorkoutScreen({ user }) {
   };
 
   const handleOpenCreateModal = () => {
+    setEditingWorkoutId(null);
+    resetCreateForm();
+    setCreateModalVisible(true);
+    loadAvailableExercises();
+  };
+
+  const handleOpenEditModal = (workout) => {
+    setEditingWorkoutId(workout.id || workout._id);
+    setNewWorkout({
+      name: workout.name || '',
+      description: workout.description || '',
+      workout_type: workout.workout_type || 'custom',
+      difficulty: workout.difficulty || 'intermediate',
+    });
+    setNewExercises(
+      workout.exercises?.length > 0
+        ? workout.exercises.map(ex => ({
+            name: ex.exercise_id?.name || '',
+            sets: String(ex.custom_sets || ex.exercise_id?.default_sets || 3),
+            reps: String(ex.custom_reps || ex.exercise_id?.default_reps || 10),
+            type: ex.exercise_id?.type || 'reps',
+            exercise_id: ex.exercise_id?.id || ex.exercise_id?._id || null,
+            newExercise: null,
+          }))
+        : [{ name: '', sets: '3', reps: '10', type: 'reps', exercise_id: null, newExercise: null }]
+    );
     setCreateModalVisible(true);
     loadAvailableExercises();
   };
@@ -125,7 +187,7 @@ export default function WorkoutScreen({ user }) {
   const handleCreateWorkout = async () => {
     // Validacions
     if (!newWorkout.name.trim()) {
-      const validationError = new ValidationError('El workout necesita un nombre', 'name');
+      const validationError = new ValidationError("El workout necessita un nom", 'name');
       const errorInfo = handleApiError(validationError);
       errorModal.openModal({
         title: errorInfo.title,
@@ -136,11 +198,11 @@ export default function WorkoutScreen({ user }) {
     }
 
     const validExercises = newExercises.filter(ex =>
-      (ex.exercise_id || ex.newExercise) && ex.sets && ex.reps
+      (ex.exercise_id || ex.newExercise || ex.name.trim()) && ex.sets && ex.reps
     );
 
     if (validExercises.length === 0) {
-      const validationError = new ValidationError('Debes añadir al menos un ejercicio válido', 'exercises');
+      const validationError = new ValidationError('Has d\'afegir almenys un exercici vàlid', 'exercises');
       const errorInfo = handleApiError(validationError);
       errorModal.openModal({
         title: errorInfo.title,
@@ -165,20 +227,18 @@ export default function WorkoutScreen({ user }) {
           // Exercici existent
           exerciseId = ex.exercise_id;
         } else if (ex.newExercise) {
-          // Crear nou exercici
-
+          // Crear nou exercici (via formulari antic - mantenim compatibilitat)
           const newEx = await createExercise({
             name: ex.newExercise.name.trim(),
-            type: ex.newExercise.type,
-            category: ex.newExercise.category, // Ara amb categoria vàlida
+            type: ex.newExercise.type || ex.type || 'reps',
+            category: ex.newExercise.category || 'full_body',
             default_sets: parseInt(ex.sets) || 3,
             default_reps: parseInt(ex.reps) || 10,
             default_rest_seconds: 60
           });
-
           exerciseId = newEx.id;
         } else {
-          // Buscar per nom (fallback)
+          // Buscar per nom
           const found = availableExercises.find(e =>
             e.name.toLowerCase() === ex.name.trim().toLowerCase()
           );
@@ -186,11 +246,11 @@ export default function WorkoutScreen({ user }) {
           if (found) {
             exerciseId = found.id;
           } else {
-            // Crear amb categoria per defecte
+            // Crear amb el tipus seleccionat
             const newEx = await createExercise({
               name: ex.name.trim(),
-              type: 'reps',
-              category: 'full_body', // Categoria per defecte vàlida
+              type: ex.type || 'reps',
+              category: 'full_body',
               default_sets: parseInt(ex.sets) || 3,
               default_reps: parseInt(ex.reps) || 10,
               default_rest_seconds: 60
@@ -217,20 +277,27 @@ export default function WorkoutScreen({ user }) {
         is_template: true
       };
 
-      const createdWorkout = await createWorkout(workoutData);
+      let savedWorkout;
+      if (editingWorkoutId) {
+        savedWorkout = await updateWorkout(editingWorkoutId, workoutData);
+      } else {
+        savedWorkout = await createWorkout(workoutData);
+      }
 
-      const successInfo = formatSuccessMessage(`El workout "${createdWorkout.name}" se ha creado correctamente`);
+      // Tancar el modal primer, després mostrar confirmació
+      setCreateModalVisible(false);
+      resetCreateForm();
+      setEditingWorkoutId(null);
+      loadWorkoutData();
+
+      const action = editingWorkoutId ? 'actualitzat' : 'creat';
+      const successInfo = formatSuccessMessage(`El workout "${savedWorkout.name}" s'ha ${action} correctament`);
       infoModal.openModal({
-        title: 'Workout Creado!',
+        title: editingWorkoutId ? 'Workout Actualitzat!' : 'Workout Creat!',
         message: successInfo.message,
         icon: successInfo.icon,
         buttonText: 'Genial!',
-        onClose: () => {
-          infoModal.closeModal();
-          setCreateModalVisible(false);
-          resetCreateForm();
-          loadWorkoutData();
-        }
+        onClose: infoModal.closeModal,
       });
 
     } catch (error) {
@@ -252,7 +319,7 @@ export default function WorkoutScreen({ user }) {
       workout_type: 'custom',
       difficulty: 'intermediate',
     });
-    setNewExercises([{ name: '', sets: '3', reps: '10', exercise_id: null, newExercise: null }]);
+    setNewExercises([{ name: '', sets: '3', reps: '10', type: 'reps', exercise_id: null, newExercise: null }]);
   };
 
   const handleExerciseChange = (index, field, value) => {
@@ -262,7 +329,7 @@ export default function WorkoutScreen({ user }) {
   };
 
   const addExercise = () => {
-    setNewExercises([...newExercises, { name: '', sets: '3', reps: '10', exercise_id: null, newExercise: null }]);
+    setNewExercises([...newExercises, { name: '', sets: '3', reps: '10', type: 'reps', exercise_id: null, newExercise: null }]);
   };
 
   const removeExercise = (index) => {
@@ -276,27 +343,59 @@ export default function WorkoutScreen({ user }) {
 
   const startWorkout = async (workout) => {
     try {
-
       const session = await startWorkoutSession(workout.id);
-
       setCurrentSessionId(session.id);
       setSelectedWorkout(workout);
       setCompletedSets([]);
       setModalVisible(true);
 
       const successInfo = formatSuccessMessage(
-        `Entrenamiento: ${workout.name}\nDuración estimada: ${workout.estimated_duration || 30} min\n\n¡A por ellas!`,
+        `Entrenament: ${workout.name}\nDurada estimada: ${workout.estimated_duration || 30} min\n\nA per-hi!`,
         'success'
       );
       infoModal.openModal({
-        title: 'SESIÓN INICIADA!',
+        title: 'SESSIÓ INICIADA!',
         message: successInfo.message,
         icon: successInfo.icon,
-        buttonText: '¡DALE!',
+        buttonText: 'ANEM-HI!',
         onClose: infoModal.closeModal,
       });
 
     } catch (error) {
+      // Active session already open (409)
+      if (error.statusCode === 409 || error.message?.toLowerCase().includes('active session')) {
+        confirmModal.openModal({
+          title: 'Sessió Activa Detectada',
+          message: 'Tens una sessió d\'entrenament en curs. Vols abandonar-la per iniciar una de nova?',
+          confirmText: 'Abandonar i Iniciar',
+          cancelText: 'Cancel·lar',
+          variant: 'danger',
+          icon: 'warning',
+          onConfirm: async () => {
+            confirmModal.closeModal();
+            try {
+              // Find and abandon active session
+              const sessions = await getWorkoutSessions({ completed: 'false' });
+              const activeSession = sessions.find(s => !s.completed && !s.abandoned);
+              if (activeSession) {
+                await abandonSession(activeSession.id, 'Abandonada per iniciar nova sessió');
+              }
+              // Retry starting the workout
+              const newSession = await startWorkoutSession(workout.id);
+              setCurrentSessionId(newSession.id);
+              setSelectedWorkout(workout);
+              setCompletedSets([]);
+              setModalVisible(true);
+            } catch (retryError) {
+              const errInfo = handleApiError(retryError);
+              errorModal.openModal({ title: errInfo.title, message: errInfo.message, icon: errInfo.icon });
+            }
+          },
+          onCancel: confirmModal.closeModal,
+        });
+        return;
+      }
+
       const errorInfo = handleApiError(error);
       errorModal.openModal({
         title: errorInfo.title,
@@ -321,11 +420,11 @@ export default function WorkoutScreen({ user }) {
       setCompletionModalVisible(false);
 
       const successInfo = formatSuccessMessage(
-        `¡BRUTAL! Has acabado ${selectedWorkout.name}\n\n+1 hacia tus objetivos\nProgresión registrada\n\n¡Un paso más cerca!`,
+        `BRUTAL! Has acabat ${selectedWorkout.name}\n\n+1 cap als teus objectius\nProgressió registrada\n\nUn pas més!`,
         'success'
       );
       infoModal.openModal({
-        title: 'ENTRENAMIENTO COMPLETADO!',
+        title: 'ENTRENAMENT COMPLETAT!',
         message: successInfo.message,
         icon: successInfo.icon,
         buttonText: 'GENIAL!',
@@ -354,8 +453,8 @@ export default function WorkoutScreen({ user }) {
 
   const handleAbandonWorkout = () => {
     confirmModal.openModal({
-      title: 'Abandonar Entrenamiento',
-      message: '¿Seguro que quieres parar? ¡Estás tan cerca!',
+      title: 'Abandonar Entrenament',
+      message: 'Segur que vols parar? Ets tan a prop!',
       confirmText: 'Abandonar',
       cancelText: 'Continuar',
       variant: 'danger',
@@ -363,12 +462,12 @@ export default function WorkoutScreen({ user }) {
       onConfirm: async () => {
         confirmModal.closeModal();
         try {
-          await abandonSession(currentSessionId, "Abandonado por el usuario");
+          await abandonSession(currentSessionId, "Abandonat per l'usuari");
           setModalVisible(false);
 
-          const infoMessage = formatSuccessMessage('Sesión abandonada. ¡Vuelve a intentarlo pronto!', 'info');
+          const infoMessage = formatSuccessMessage('Sessió abandonada. Torna-ho a intentar aviat!', 'info');
           infoModal.openModal({
-            title: 'Información',
+            title: 'Informació',
             message: infoMessage.message,
             icon: infoMessage.icon,
             onClose: infoModal.closeModal,
@@ -423,13 +522,8 @@ export default function WorkoutScreen({ user }) {
 
   return (
     <LinearGradient colors={[colors.primary, colors.primaryDark]} style={{ flex: 1 }}>
-      <ImageBackground
-        source={{ uri: 'https://www.transparenttextures.com/patterns/green-fibers.png' }}
-        style={styles.bg}
-        resizeMode="repeat"
-      >
-        <SafeAreaView style={{ flex: 1 }}>
-          <ScrollView
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView
             contentContainerStyle={styles.container}
             refreshControl={
               <RefreshControl
@@ -502,18 +596,11 @@ export default function WorkoutScreen({ user }) {
                   key={workout.id}
                   workout={workout}
                   onStart={startWorkout}
+                  onEdit={handleOpenEditModal}
                 />
               ))
             )}
           </ScrollView>
-
-          {/* BOTÓ FLOTANT PER GENERAR AMB IA */}
-          <TouchableOpacity
-            style={[styles.fabButton, styles.fabButtonSecondary]}
-            onPress={() => setAiGeneratorVisible(true)}
-          >
-            <Sparkles size={28} color="white" />
-          </TouchableOpacity>
 
           {/* BOTÓ FLOTANT PER CREAR WORKOUT */}
           <TouchableOpacity
@@ -529,7 +616,9 @@ export default function WorkoutScreen({ user }) {
             onClose={() => {
               setCreateModalVisible(false);
               resetCreateForm();
+              setEditingWorkoutId(null);
             }}
+            isEditing={!!editingWorkoutId}
             newWorkout={newWorkout}
             onWorkoutChange={setNewWorkout}
             newExercises={newExercises}
@@ -539,15 +628,6 @@ export default function WorkoutScreen({ user }) {
             availableExercises={availableExercises}
             onSubmit={handleCreateWorkout}
             creating={creating}
-          />
-
-          {/* MODAL DE GENERADOR DE AI */}
-          <AIWorkoutGeneratorModal
-            visible={aiGeneratorVisible}
-            onClose={() => setAiGeneratorVisible(false)}
-            onWorkoutGenerated={(workout) => {
-              loadWorkoutData(); // Recargar workouts
-            }}
           />
 
           {/* MODAL DE COMPLETAR WORKOUT */}
@@ -587,14 +667,12 @@ export default function WorkoutScreen({ user }) {
             icon={errorModal.modalData.icon}
             onClose={errorModal.modalData.onClose || errorModal.closeModal}
           />
-        </SafeAreaView>
-      </ImageBackground>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1 },
   container: { padding: 20, paddingBottom: 100 },
   headerContainer: {
     flexDirection: 'row',
@@ -709,9 +787,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-  },
-  fabButtonSecondary: {
-    bottom: 100,
-    backgroundColor: colors.secondary,
   },
 });
