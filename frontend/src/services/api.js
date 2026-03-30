@@ -349,10 +349,12 @@ export const executeAIAction = async (action) => {
 };
 
 export const changeAIPersonality = async (personalityType) => {
-    return fetchWithAuth('/ai/personality', {
+    const data = await fetchWithAuth('/ai/personality', {
         method: 'PUT',
         body: JSON.stringify({ personality: personalityType })
     });
+    cache.invalidate('user:me');
+    return data;
 };
 
 // ============ PROFILE ============

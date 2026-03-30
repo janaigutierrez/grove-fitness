@@ -176,8 +176,6 @@ export default function AIChatScreen() {
         icon: successInfo.icon,
         onClose: infoModal.closeModal,
       });
-
-      await loadUser();
     } catch (error) {
       const errorInfo = handleApiError(error);
       errorModal.openModal({
