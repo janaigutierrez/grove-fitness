@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 require('dotenv').config();
@@ -10,6 +11,7 @@ connectDB();
 const app = express();
 
 // Middleware
+app.use(compression());
 app.use(cors());
 app.use(express.json({ extended: false }));
 

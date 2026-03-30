@@ -1,4 +1,5 @@
 const aiService = require('../services/aiService');
+const { findPredefinedAnswer } = require('../services/predefinedResponses');
 
 const chat = async (req, res, next) => {
     try {
@@ -32,6 +33,10 @@ const analyzeProgress = async (req, res, next) => {
 const askQuestion = async (req, res, next) => {
     try {
         const { question } = req.body;
+        const predefined = findPredefinedAnswer(question);
+        if (predefined) {
+            return res.json({ success: true, answer: predefined, source: 'predefined' });
+        }
         const result = await aiService.answerFitnessQuestion(req.user._id, question);
         res.json(result);
     } catch (error) {
