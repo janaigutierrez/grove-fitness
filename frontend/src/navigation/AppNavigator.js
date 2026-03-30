@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -6,6 +7,13 @@ import Icon from 'react-native-vector-icons/Ionicons';
 
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { setOnUnauthorizedCallback } from '../services/api';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL_PRODUCTION || 'http://localhost:5000';
+const KEEP_ALIVE_INTERVAL_MS = 14 * 60 * 1000; // 14 min
+
+const pingBackend = () => {
+    fetch(`${BACKEND_URL.replace('/api', '')}/health`).catch(() => {});
+};
 
 // Screens d'autenticació
 import LandingScreen from '../screens/LandingScreen';
@@ -63,11 +71,30 @@ function MainTabs() {
 
 function RootNavigator() {
   const { user, forceLogout } = useAuth();
+  const keepAliveRef = useRef(null);
 
-  // Registrar el callback de 401 a l'API perquè pugui forçar logout
   useEffect(() => {
     setOnUnauthorizedCallback(forceLogout);
   }, [forceLogout]);
+
+  // Keep-alive: ping backend every 14 min to prevent Render free tier sleep
+  useEffect(() => {
+    if (!user) return;
+
+    pingBackend(); // ping on login
+
+    keepAliveRef.current = setInterval(pingBackend, KEEP_ALIVE_INTERVAL_MS);
+
+    const handleAppState = (nextState) => {
+      if (nextState === 'active') pingBackend(); // ping on foreground
+    };
+    const sub = AppState.addEventListener('change', handleAppState);
+
+    return () => {
+      clearInterval(keepAliveRef.current);
+      sub.remove();
+    };
+  }, [user]);
 
   return (
     <NavigationContainer>

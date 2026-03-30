@@ -6,6 +6,7 @@ const Exercise = require('../models/Exercise');
 const WorkoutSession = require('../models/WorkoutSession');
 const profileService = require('./profileService');
 const userService = require('./userService');
+const serverCache = require('./cacheService');
 
 // Parse action block from AI response: [ACTION]{...}[/ACTION]
 const parseActionFromResponse = (text) => {
@@ -21,8 +22,12 @@ const parseActionFromResponse = (text) => {
     }
 };
 
-// Helper: Obtener contexto del usuario
+// Helper: Obtener contexto del usuario (cached 2 min)
 const getUserContext = async (userId) => {
+    const cacheKey = `ai:context:${userId}`;
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
     const user = await User.findById(userId).select('-password');
 
     if (!user) {
@@ -62,7 +67,7 @@ const getUserContext = async (userId) => {
         .select('_id name workout_type')
         .limit(20);
 
-    return {
+    const context = {
         name: user.name,
         fitness_level: user.fitness_level,
         available_equipment: user.available_equipment || [],
@@ -99,6 +104,9 @@ const getUserContext = async (userId) => {
             type: w.workout_type
         }))
     };
+
+    serverCache.set(cacheKey, context, 2 * 60); // 2 min TTL
+    return context;
 };
 
 // Chat conversacional
@@ -177,6 +185,12 @@ const executeAction = async (userId, action) => {
         const error = new Error('Invalid action');
         error.statusCode = 400;
         throw error;
+    }
+
+    // Invalidar cache de context quan l'acció modifica dades de l'usuari
+    const contextInvalidatingActions = ['update_profile', 'log_weight', 'update_schedule', 'create_workout'];
+    if (contextInvalidatingActions.includes(action.type)) {
+        serverCache.del(`ai:context:${userId}`);
     }
 
     switch (action.type) {
